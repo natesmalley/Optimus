@@ -1,0 +1,7 @@
+
+# CoralCollective
+.coral/projects/
+.coral/feedback/
+.coral/metrics/
+.coral/__pycache__/
+.coral/*.pyc

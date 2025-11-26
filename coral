@@ -1,0 +1,96 @@
+#!/bin/bash
+# CoralCollective Wrapper Script
+# This script runs CoralCollective from the .coral directory
+
+# Check if .coral exists
+if [ ! -d ".coral" ]; then
+    echo "❌ CoralCollective not found in this project"
+    echo "Run 'coral-drop.sh' first to install"
+    exit 1
+fi
+
+# Check for Python
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Python 3 is required but not installed"
+    exit 1
+fi
+
+# Setup virtual environment if needed
+if [ ! -d ".coral/venv" ]; then
+    echo "🔧 Setting up Python virtual environment..."
+    python3 -m venv .coral/venv
+    source .coral/venv/bin/activate
+    pip install --upgrade pip --quiet
+    if [ -f ".coral/requirements.txt" ]; then
+        pip install -r .coral/requirements.txt --quiet
+    else
+        pip install rich pyyaml pyperclip --quiet
+    fi
+    echo "✅ Virtual environment created"
+else
+    source .coral/venv/bin/activate 2>/dev/null || true
+fi
+
+# Parse command
+COMMAND=${1:-help}
+
+case "$COMMAND" in
+    help|--help|-h)
+        echo "🪸 CoralCollective Commands"
+        echo "=========================="
+        echo ""
+        echo "Usage: ./coral [command] [options]"
+        echo ""
+        echo "Commands:"
+        echo "  workflow    - Start workflow wizard for this project"
+        echo "  agent       - Run a specific agent"
+        echo "  list        - List available agents"
+        echo "  init        - Initialize/reinitialize CoralCollective"
+        echo "  update      - Update CoralCollective configuration"
+        echo ""
+        echo "Examples:"
+        echo "  ./coral workflow"
+        echo "  ./coral agent backend_developer 'Create user authentication'"
+        echo "  ./coral list"
+        ;;
+        
+    workflow)
+        cd .coral && python3 agent_runner.py workflow
+        ;;
+        
+    agent)
+        shift
+        AGENT_ID=$1
+        shift
+        TASK="$@"
+        if [ -z "$AGENT_ID" ] || [ -z "$TASK" ]; then
+            echo "Usage: ./coral agent <agent_id> <task>"
+            exit 1
+        fi
+        cd .coral && python3 agent_runner.py run --agent "$AGENT_ID" --task "$TASK"
+        ;;
+        
+    list)
+        cd .coral && python3 agent_runner.py list
+        ;;
+        
+    init)
+        cd .coral && python3 agent_runner.py init
+        ;;
+        
+    update)
+        echo "Updating CoralCollective configuration..."
+        # Re-run the drop-in script to update
+        if [ -f "../coral_drop.sh" ]; then
+            ../coral_drop.sh
+        else
+            echo "Update script not found. Please re-download coral_drop.sh"
+        fi
+        ;;
+        
+    *)
+        echo "Unknown command: $COMMAND"
+        echo "Run './coral help' for usage information"
+        exit 1
+        ;;
+esac

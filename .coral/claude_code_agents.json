@@ -1,0 +1,305 @@
+{
+  "agents": {
+    "project_architect": {
+      "name": "Project Architect",
+      "category": "core",
+      "description": "System design and architecture planning",
+      "prompt_path": "agents/core/project_architect.md",
+      "capabilities": ["planning", "architecture", "structure", "handoff"]
+    },
+    "technical_writer_phase1": {
+      "name": "Technical Writer (Phase 1)",
+      "category": "core",
+      "description": "Requirements and API documentation",
+      "prompt_path": "agents/core/technical_writer.md",
+      "capabilities": ["requirements", "api_specs", "acceptance_criteria", "templates"]
+    },
+    "technical_writer_phase2": {
+      "name": "Technical Writer (Phase 2)",
+      "category": "core",
+      "description": "User documentation and guides",
+      "prompt_path": "agents/core/technical_writer.md",
+      "capabilities": ["user_docs", "deployment_docs", "troubleshooting", "reference"]
+    },
+    "backend_developer": {
+      "name": "Backend Developer",
+      "category": "development",
+      "description": "Server-side and database specialist",
+      "prompt_path": "agents/specialists/backend_developer.md",
+      "capabilities": ["api", "auth", "models", "docs", "tests"]
+    },
+    "frontend_developer": {
+      "name": "Frontend Developer",
+      "category": "development",
+      "description": "UI/UX implementation specialist",
+      "prompt_path": "agents/specialists/frontend_developer.md",
+      "capabilities": ["ui", "accessibility", "integration", "performance", "tests"]
+    },
+    "full_stack_engineer": {
+      "name": "Full Stack Engineer",
+      "category": "development",
+      "description": "End-to-end development specialist",
+      "prompt_path": "agents/specialists/full_stack_engineer.md",
+      "capabilities": ["full_stack", "debugging", "production_ops", "product_thinking"]
+    },
+    "mobile_developer": {
+      "name": "Mobile Developer",
+      "category": "development",
+      "description": "iOS and Android app development",
+      "prompt_path": "agents/specialists/mobile_developer.md",
+      "capabilities": ["ios", "android", "integration", "offline"]
+    },
+    "ai_ml_specialist": {
+      "name": "AI/ML Specialist",
+      "category": "ai",
+      "description": "AI integration and machine learning",
+      "prompt_path": "agents/specialists/ai_ml_specialist.md",
+      "capabilities": ["models", "endpoints", "vector_db", "evals"]
+    },
+    "database_specialist": {
+      "name": "Database Specialist",
+      "category": "data",
+      "description": "Database design and optimization",
+      "prompt_path": "agents/specialists/database_specialist.md",
+      "capabilities": ["schema", "indexing", "migrations", "backups"]
+    },
+    "data_engineer": {
+      "name": "Data Engineer",
+      "category": "data",
+      "description": "Data pipelines and ETL processes",
+      "prompt_path": "agents/specialists/data_engineer.md",
+      "capabilities": ["pipelines", "etl", "quality", "monitoring"]
+    },
+    "api_designer": {
+      "name": "API Designer",
+      "category": "design",
+      "description": "RESTful and GraphQL API design",
+      "prompt_path": "agents/specialists/api_designer.md",
+      "capabilities": ["api_spec", "contracts", "auth", "rate_limits"]
+    },
+    "ui_designer": {
+      "name": "UI Designer",
+      "category": "design",
+      "description": "Design systems and component architecture",
+      "prompt_path": "agents/specialists/ui_designer.md",
+      "capabilities": ["design_system", "components", "accessibility_requirements", "handoff"]
+    },
+    "security_specialist": {
+      "name": "Security Specialist",
+      "category": "security",
+      "description": "Application security and compliance",
+      "prompt_path": "agents/specialists/security_specialist.md",
+      "capabilities": ["authz", "encryption", "headers", "scanning"]
+    },
+    "compliance_specialist": {
+      "name": "Compliance Specialist",
+      "category": "security",
+      "description": "Regulatory compliance and data governance",
+      "prompt_path": "agents/specialists/compliance_specialist.md",
+      "capabilities": ["pii", "retention", "dsr", "audits"]
+    },
+    "devops_deployment": {
+      "name": "DevOps & Deployment",
+      "category": "operations",
+      "description": "Infrastructure and deployment specialist",
+      "prompt_path": "agents/specialists/devops_deployment.md",
+      "capabilities": ["cicd", "infra", "deploy", "backups"]
+    },
+    "site_reliability_engineer": {
+      "name": "Site Reliability Engineer",
+      "category": "operations",
+      "description": "System reliability and monitoring",
+      "prompt_path": "agents/specialists/site_reliability_engineer.md",
+      "capabilities": ["slos", "monitoring", "alerts", "runbooks", "dr"]
+    },
+    "performance_engineer": {
+      "name": "Performance Engineer",
+      "category": "quality",
+      "description": "Performance optimization and profiling",
+      "prompt_path": "agents/specialists/performance_engineer.md",
+      "capabilities": ["profiling", "optimization", "load_test", "caching"]
+    },
+    "qa_testing": {
+      "name": "QA & Testing",
+      "category": "quality",
+      "description": "Quality assurance and testing specialist",
+      "prompt_path": "agents/specialists/qa_testing.md",
+      "capabilities": ["unit", "integration", "coverage", "accessibility"]
+    },
+    "accessibility_specialist": {
+      "name": "Accessibility Specialist",
+      "category": "quality",
+      "description": "WCAG compliance and accessibility",
+      "prompt_path": "agents/specialists/accessibility_specialist.md",
+      "capabilities": ["wcag", "aria", "keyboard", "testing"]
+    },
+    "analytics_engineer": {
+      "name": "Analytics Engineer",
+      "category": "data",
+      "description": "Analytics and instrumentation specialist",
+      "prompt_path": "agents/specialists/analytics_engineer.md",
+      "capabilities": ["taxonomy", "schemas", "instrumentation", "dashboards"]
+    },
+    "model_strategy_specialist": {
+      "name": "Model Strategy Specialist",
+      "category": "optimization",
+      "description": "AI model optimization and cost management",
+      "prompt_path": "agents/specialists/model_strategy_specialist.md",
+      "capabilities": ["model_research", "pricing_analysis", "performance_benchmarking", "cost_optimization"]
+    }
+  },
+  "workflows": {
+    "full_stack_web": {
+      "name": "Full-Stack Web Application",
+      "description": "Complete web application development",
+      "phases": [
+        {
+          "name": "Planning & Foundation",
+          "agents": ["project_architect", "technical_writer_phase1"]
+        },
+        {
+          "name": "Development",
+          "agents": ["backend_developer", "frontend_developer", "database_specialist"]
+        },
+        {
+          "name": "Quality & Deployment",
+          "agents": ["qa_testing", "security_specialist", "devops_deployment"]
+        },
+        {
+          "name": "Documentation",
+          "agents": ["technical_writer_phase2"]
+        }
+      ]
+    },
+    "api_service": {
+      "name": "API Service",
+      "description": "RESTful or GraphQL API development",
+      "phases": [
+        {
+          "name": "Planning",
+          "agents": ["project_architect", "api_designer"]
+        },
+        {
+          "name": "Development",
+          "agents": ["backend_developer", "database_specialist"]
+        },
+        {
+          "name": "Testing & Deployment",
+          "agents": ["qa_testing", "devops_deployment"]
+        }
+      ]
+    },
+    "ai_application": {
+      "name": "AI-Powered Application",
+      "description": "Application with AI/ML features",
+      "phases": [
+        {
+          "name": "Planning",
+          "agents": ["project_architect", "technical_writer_phase1"]
+        },
+        {
+          "name": "AI Development",
+          "agents": ["ai_ml_specialist", "backend_developer"]
+        },
+        {
+          "name": "Integration",
+          "agents": ["frontend_developer", "api_designer"]
+        },
+        {
+          "name": "Deployment",
+          "agents": ["devops_deployment", "site_reliability_engineer"]
+        }
+      ]
+    }
+  },
+  "project_templates": {
+    "full_stack_web": {
+      "name": "Full-Stack Web Application",
+      "description": "Complete web application with frontend, backend, and database",
+      "sequence": ["project_architect", "technical_writer_phase1", "backend_developer", "frontend_developer", "database_specialist", "qa_testing", "security_specialist", "devops_deployment", "technical_writer_phase2"]
+    },
+    "ai_powered_app": {
+      "name": "AI-Powered Application",
+      "description": "Application with AI/ML features and integrations",
+      "sequence": ["project_architect", "technical_writer_phase1", "ai_ml_specialist", "backend_developer", "frontend_developer", "qa_testing", "devops_deployment", "site_reliability_engineer"]
+    },
+    "api_service": {
+      "name": "API Service",
+      "description": "RESTful or GraphQL API backend service",
+      "sequence": ["project_architect", "api_designer", "backend_developer", "database_specialist", "qa_testing", "devops_deployment"]
+    },
+    "frontend_only": {
+      "name": "Frontend Only",
+      "description": "Single-page application or static website",
+      "sequence": ["project_architect", "ui_designer", "frontend_developer", "accessibility_specialist", "qa_testing", "devops_deployment"]
+    },
+    "mobile_app": {
+      "name": "Mobile Application",
+      "description": "iOS and Android mobile app development",
+      "sequence": ["project_architect", "mobile_developer", "backend_developer", "api_designer", "qa_testing", "devops_deployment"]
+    },
+    "data_pipeline": {
+      "name": "Data Pipeline",
+      "description": "ETL pipeline and data processing system",
+      "sequence": ["project_architect", "data_engineer", "database_specialist", "analytics_engineer", "qa_testing", "devops_deployment"]
+    },
+    "custom": {
+      "name": "Custom Workflow",
+      "description": "Define your own agent sequence",
+      "sequence": []
+    },
+    "mvp": {
+      "name": "Quick MVP",
+      "description": "Minimal viable product with rapid development",
+      "sequence": ["full_stack_engineer", "qa_testing", "devops_deployment"]
+    }
+  },
+  "project_templates": {
+    "full_stack_web": {
+      "name": "Full-Stack Web Application",
+      "description": "Complete web application with frontend, backend, and database",
+      "sequence": ["project_architect", "technical_writer_phase1", "backend_developer", "frontend_developer", "database_specialist", "qa_testing", "security_specialist", "devops_deployment", "technical_writer_phase2"]
+    },
+    "ai_powered_app": {
+      "name": "AI-Powered Application",
+      "description": "Application with AI/ML features and integrations",
+      "sequence": ["project_architect", "technical_writer_phase1", "ai_ml_specialist", "backend_developer", "frontend_developer", "qa_testing", "devops_deployment", "site_reliability_engineer"]
+    },
+    "api_service": {
+      "name": "API Service",
+      "description": "RESTful or GraphQL API backend service",
+      "sequence": ["project_architect", "api_designer", "backend_developer", "database_specialist", "qa_testing", "devops_deployment"]
+    },
+    "frontend_only": {
+      "name": "Frontend Only",
+      "description": "Single-page application or static website",
+      "sequence": ["project_architect", "ui_designer", "frontend_developer", "accessibility_specialist", "qa_testing", "devops_deployment"]
+    },
+    "mobile_app": {
+      "name": "Mobile Application",
+      "description": "iOS and Android mobile app development",
+      "sequence": ["project_architect", "mobile_developer", "backend_developer", "api_designer", "qa_testing", "devops_deployment"]
+    },
+    "mvp": {
+      "name": "Quick MVP",
+      "description": "Minimal viable product with rapid development",
+      "sequence": ["full_stack_engineer", "qa_testing", "devops_deployment"]
+    },
+    "custom": {
+      "name": "Custom Workflow",
+      "description": "Define your own agent sequence",
+      "sequence": []
+    }
+  },
+  "categories": {
+    "core": "Core Planning & Documentation",
+    "development": "Development & Implementation",
+    "ai": "AI & Machine Learning",
+    "data": "Data & Analytics",
+    "design": "Design & Architecture",
+    "security": "Security & Compliance",
+    "operations": "Operations & Infrastructure",
+    "quality": "Quality & Testing",
+    "optimization": "Optimization & Strategy"
+  }
+}

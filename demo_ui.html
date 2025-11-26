@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimus - Council of Minds Assistant</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+        
+        .robot-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid #22c55e;
+            border-radius: 20px;
+            color: #22c55e;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .main-container {
+            display: flex;
+            max-width: 1400px;
+            margin: 2rem auto;
+            gap: 2rem;
+            padding: 0 2rem;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            height: fit-content;
+        }
+        
+        .personas-list {
+            margin-top: 1rem;
+        }
+        
+        .persona-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .persona-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(4px);
+        }
+        
+        .persona-card.active {
+            background: rgba(96, 165, 250, 0.2);
+            border-color: #60a5fa;
+        }
+        
+        .persona-name {
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 0.25rem;
+        }
+        
+        .persona-role {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+        
+        .chat-container {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 180px);
+        }
+        
+        .chat-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 1.5rem;
+        }
+        
+        .message-user {
+            background: rgba(96, 165, 250, 0.1);
+            border-left: 3px solid #60a5fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .message-council {
+            background: rgba(139, 92, 246, 0.1);
+            border-left: 3px solid #8b5cf6;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        
+        .council-response {
+            margin-top: 1rem;
+        }
+        
+        .persona-response {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .persona-response-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .persona-response-name {
+            font-weight: 600;
+            color: #a78bfa;
+        }
+        
+        .confidence-badge {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+        
+        .consensus-box {
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        .consensus-label {
+            font-weight: 600;
+            color: #60a5fa;
+            margin-bottom: 0.5rem;
+        }
+        
+        .input-container {
+            padding: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .input-field {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 1rem;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .send-button {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .send-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .voice-button {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .voice-button:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        
+        .stat-label {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="robot-icon">🤖</div>
+            <span>OPTIMUS</span>
+        </div>
+        <div class="status">
+            <div class="status-dot"></div>
+            <span>All Systems Optimal</span>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <h3 style="color: #60a5fa; margin-bottom: 1rem;">Council of Minds</h3>
+            <div class="personas-list">
+                <div class="persona-card active">
+                    <div class="persona-name">Strategist</div>
+                    <div class="persona-role">Long-term Vision</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Pragmatist</div>
+                    <div class="persona-role">Practical Solutions</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Innovator</div>
+                    <div class="persona-role">Creative Thinking</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Guardian</div>
+                    <div class="persona-role">Security & Risk</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Analyst</div>
+                    <div class="persona-role">Data Insights</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Philosopher</div>
+                    <div class="persona-role">Ethics & Meaning</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Healer</div>
+                    <div class="persona-role">Health & Wellness</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Socialite</div>
+                    <div class="persona-role">Relationships</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Economist</div>
+                    <div class="persona-role">Financial Planning</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Creator</div>
+                    <div class="persona-role">Artistic Expression</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Scholar</div>
+                    <div class="persona-role">Learning & Education</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Explorer</div>
+                    <div class="persona-role">Growth & Adventure</div>
+                </div>
+                <div class="persona-card">
+                    <div class="persona-name">Mentor</div>
+                    <div class="persona-role">Guidance & Leadership</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2 style="color: #e0e0e0; margin-bottom: 0.5rem;">Council Deliberation</h2>
+                <p style="color: #9ca3af;">13 personas analyzing your queries</p>
+            </div>
+            
+            <div class="chat-messages">
+                <div class="message">
+                    <div class="message-user">
+                        <strong>You:</strong> Should I migrate my monolithic application to microservices?
+                    </div>
+                    
+                    <div class="message-council">
+                        <strong style="color: #8b5cf6;">Council Response:</strong>
+                        
+                        <div class="council-response">
+                            <div class="persona-response">
+                                <div class="persona-response-header">
+                                    <span class="persona-response-name">Strategist</span>
+                                    <span class="confidence-badge">85% confidence</span>
+                                </div>
+                                <p style="color: #d1d5db; font-size: 0.9rem;">Consider your long-term scalability needs. Microservices provide better scaling but require more operational complexity.</p>
+                            </div>
+                            
+                            <div class="persona-response">
+                                <div class="persona-response-header">
+                                    <span class="persona-response-name">Pragmatist</span>
+                                    <span class="confidence-badge">72% confidence</span>
+                                </div>
+                                <p style="color: #d1d5db; font-size: 0.9rem;">Start with extracting one service first. Full migration carries significant risk and cost.</p>
+                            </div>
+                            
+                            <div class="persona-response">
+                                <div class="persona-response-header">
+                                    <span class="persona-response-name">Guardian</span>
+                                    <span class="confidence-badge">90% confidence</span>
+                                </div>
+                                <p style="color: #d1d5db; font-size: 0.9rem;">Ensure proper security boundaries between services. Each microservice increases your attack surface.</p>
+                            </div>
+                            
+                            <div class="persona-response">
+                                <div class="persona-response-header">
+                                    <span class="persona-response-name">Economist</span>
+                                    <span class="confidence-badge">78% confidence</span>
+                                </div>
+                                <p style="color: #d1d5db; font-size: 0.9rem;">Migration costs will be significant. Budget for 2-3x initial estimates and consider ROI timeline.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="consensus-box">
+                            <div class="consensus-label">Council Consensus:</div>
+                            <p style="color: #e0e0e0;"><strong>Gradual Migration Recommended</strong> - Start with a pilot service to validate approach. The council agrees (78% consensus) that immediate full migration carries unnecessary risk.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="message">
+                    <div class="message-user">
+                        <strong>You:</strong> How should I balance work and personal life while launching this startup?
+                    </div>
+                    
+                    <div class="message-council">
+                        <strong style="color: #8b5cf6;">Council Response:</strong>
+                        
+                        <div class="council-response">
+                            <div class="persona-response">
+                                <div class="persona-response-header">
+                                    <span class="persona-response-name">Healer</span>
+                                    <span class="confidence-badge">92% confidence</span>
+                                </div>
+                                <p style="color: #d1d5db; font-size: 0.9rem;">Schedule non-negotiable wellness time. Burnout will cost you more than any temporary productivity gain.</p>
+                            </div>
+                            
+                            <div class="persona-response">
+                                <div class="persona-response-header">
+                                    <span class="persona-response-name">Philosopher</span>
+                                    <span class="confidence-badge">88% confidence</span>
+                                </div>
+                                <p style="color: #d1d5db; font-size: 0.9rem;">Define what success means beyond business metrics. Your values should guide your time allocation.</p>
+                            </div>
+                            
+                            <div class="persona-response">
+                                <div class="persona-response-header">
+                                    <span class="persona-response-name">Socialite</span>
+                                    <span class="confidence-badge">85% confidence</span>
+                                </div>
+                                <p style="color: #d1d5db; font-size: 0.9rem;">Maintain key relationships actively. Your support network is crucial for long-term success.</p>
+                            </div>
+                            
+                            <div class="persona-response">
+                                <div class="persona-response-header">
+                                    <span class="persona-response-name">Mentor</span>
+                                    <span class="confidence-badge">80% confidence</span>
+                                </div>
+                                <p style="color: #d1d5db; font-size: 0.9rem;">Set boundaries early and communicate them clearly to your team. Lead by example in work-life balance.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="consensus-box">
+                            <div class="consensus-label">Council Consensus:</div>
+                            <p style="color: #e0e0e0;"><strong>Sustainable Pace Critical</strong> - The council unanimously agrees (86% consensus) that maintaining balance is essential for long-term success. Implement structured boundaries immediately.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <input type="text" class="input-field" placeholder="Ask the Council of Minds anything...">
+                <button class="voice-button">🎤</button>
+                <button class="send-button">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <div style="max-width: 1400px; margin: 2rem auto; padding: 0 2rem;">
+        <h3 style="color: #60a5fa; margin-bottom: 1rem;">System Analytics</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Active Projects</div>
+                <div class="stat-value">12</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Decisions Made</div>
+                <div class="stat-value">847</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Consensus Rate</div>
+                <div class="stat-value">78%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Response Time</div>
+                <div class="stat-value">1.2s</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Demo interactivity
+        document.querySelectorAll('.persona-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.persona-card').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        // Voice button animation
+        document.querySelector('.voice-button').addEventListener('click', function() {
+            this.style.animation = 'pulse 1s infinite';
+            setTimeout(() => {
+                this.style.animation = '';
+                alert('Optimus Prime voice interface will be available soon!');
+            }, 2000);
+        });
+        
+        // Send button
+        document.querySelector('.send-button').addEventListener('click', function() {
+            const input = document.querySelector('.input-field');
+            if (input.value) {
+                alert(`Council is deliberating on: "${input.value}"`);
+                input.value = '';
+            }
+        });
+    </script>
+</body>
+</html>

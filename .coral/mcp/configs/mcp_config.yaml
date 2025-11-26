@@ -1,0 +1,300 @@
+# MCP Configuration for CoralCollective
+# This file defines which MCP servers are available and their settings
+
+version: 1.0
+last_updated: 2025-01-31
+
+# Global settings
+global:
+  audit_logging: true
+  audit_log_path: ./mcp/logs/audit.log
+  sandbox_mode: true
+  max_concurrent_servers: 10
+
+# MCP Server Configurations
+mcp_servers:
+  # Core Development Stack
+  github:
+    enabled: true
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-github"
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
+    permissions:
+      - repo_read
+      - repo_write
+      - issue_manage
+      - pr_manage
+    agents:
+      - all
+    features:
+      - repository_management
+      - issue_tracking
+      - pull_requests
+      - actions_management
+    
+  filesystem:
+    enabled: true
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-filesystem"
+      - "${PROJECT_ROOT}"
+    permissions:
+      - read
+      - write
+      - create
+      - delete
+    sandboxed: true
+    excluded_paths:
+      - .env
+      - .git
+      - secrets/
+      - node_modules/
+    agents:
+      - all
+    
+  postgres:
+    enabled: true
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-postgres"
+    env:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    mode: read_only  # Change to read_write for development
+    agents:
+      - database_specialist
+      - backend_developer
+      - data_engineer
+    features:
+      - schema_inspection
+      - query_execution
+      - migration_management
+    
+  supabase:
+    enabled: false  # Enable if using Supabase instead of raw Postgres
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-supabase"
+    env:
+      SUPABASE_URL: "${SUPABASE_URL}"
+      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
+    branch: development
+    agents:
+      - database_specialist
+      - backend_developer
+    
+  docker:
+    enabled: true
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-docker"
+    env:
+      DOCKER_HOST: "${DOCKER_HOST}"
+    agents:
+      - devops_deployment
+      - backend_developer
+      - qa_testing
+    features:
+      - container_management
+      - compose_operations
+      - image_building
+    
+  e2b:
+    enabled: true
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-e2b"
+    env:
+      E2B_API_KEY: "${E2B_API_KEY}"
+    sandbox: true
+    languages:
+      - python
+      - javascript
+      - typescript
+      - go
+    agents:
+      - qa_testing
+      - frontend_developer
+      - backend_developer
+    
+  # Enhanced Productivity
+  brave-search:
+    enabled: true
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-brave-search"
+    env:
+      BRAVE_API_KEY: "${BRAVE_API_KEY}"
+    agents:
+      - all
+    max_results: 10
+    
+  slack:
+    enabled: false  # Enable when Slack integration is needed
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-slack"
+    env:
+      SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN}"
+      SLACK_TEAM_ID: "${SLACK_TEAM_ID}"
+    agents:
+      - project_architect
+      - devops_deployment
+    features:
+      - send_messages
+      - read_channels
+      - file_sharing
+    
+  linear:
+    enabled: false  # Enable for project management
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-linear"
+    env:
+      LINEAR_API_KEY: "${LINEAR_API_KEY}"
+    agents:
+      - project_architect
+      - technical_writer
+    
+  notion:
+    enabled: false  # Enable for documentation
+    command: npx
+    args:
+      - "@modelcontextprotocol/server-notion"
+    env:
+      NOTION_API_KEY: "${NOTION_API_KEY}"
+    agents:
+      - technical_writer
+      - project_architect
+
+# Agent-specific permissions
+agent_permissions:
+  backend_developer:
+    servers:
+      - github
+      - filesystem
+      - postgres
+      - docker
+      - e2b
+      - brave-search
+    max_tokens_per_operation: 25000
+    
+  frontend_developer:
+    servers:
+      - github
+      - filesystem
+      - e2b
+      - brave-search
+    max_tokens_per_operation: 20000
+    
+  devops_deployment:
+    servers:
+      - github
+      - filesystem
+      - docker
+      - slack
+    max_tokens_per_operation: 15000
+    
+  qa_testing:
+    servers:
+      - github
+      - filesystem
+      - e2b
+      - docker
+    max_tokens_per_operation: 20000
+    
+  database_specialist:
+    servers:
+      - postgres
+      - filesystem
+      - github
+    max_tokens_per_operation: 15000
+    
+  security_specialist:
+    servers:
+      - github
+      - filesystem
+    read_only: true
+    max_tokens_per_operation: 20000
+    
+  project_architect:
+    servers:
+      - github
+      - linear
+      - notion
+      - slack
+      - brave-search
+    max_tokens_per_operation: 25000
+    
+  technical_writer:
+    servers:
+      - github
+      - filesystem
+      - notion
+      - brave-search
+    max_tokens_per_operation: 15000
+    
+  model_strategy_specialist:
+    servers:
+      - github
+      - filesystem
+      - brave-search
+    max_tokens_per_operation: 20000
+
+# Security policies
+security:
+  require_authentication: true
+  encrypt_communications: true
+  log_all_operations: true
+  rate_limiting:
+    requests_per_minute: 100
+    requests_per_hour: 5000
+  
+  forbidden_operations:
+    - delete_production_data
+    - modify_security_settings
+    - access_secrets_directory
+  
+  allowed_file_extensions:
+    - .py
+    - .js
+    - .ts
+    - .jsx
+    - .tsx
+    - .json
+    - .yaml
+    - .yml
+    - .md
+    - .txt
+    - .sh
+    - .sql
+    - .dockerfile
+    - .env.example
+
+# Monitoring and alerts
+monitoring:
+  metrics:
+    - server_uptime
+    - operation_count
+    - error_rate
+    - response_time
+  
+  alerts:
+    - type: error_rate
+      threshold: 0.05
+      action: notify_admin
+    
+    - type: unauthorized_access
+      action: block_and_notify
+    
+    - type: rate_limit_exceeded
+      action: throttle
+
+# Feature flags
+features:
+  enable_caching: true
+  enable_retry_logic: true
+  enable_circuit_breaker: true
+  enable_request_validation: true
+  enable_response_sanitization: true

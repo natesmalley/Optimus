@@ -1,0 +1,16 @@
+{
+  "mode": "standalone",
+  "respect_existing": true,
+  "create_directories": false,
+  "use_hidden_directories": true,
+  "directories": {
+    "projects": ".coral/projects",
+    "feedback": ".coral/feedback",
+    "metrics": ".coral/metrics"
+  },
+  "integration": {
+    "detect_framework": true,
+    "use_existing_tests": true,
+    "use_existing_docs": true
+  }
+}

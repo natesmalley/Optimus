@@ -1,0 +1,44 @@
+{
+  "coral.enabled": true,
+  "coral.project.name": "Optimus",
+  "coral.project.type": "ai_platform",
+  "coral.performance.async": true,
+  "coral.performance.cache": true,
+  "coral.performance.parallel": true,
+  "coral.ide.completions": true,
+  "coral.ide.codelenses": true,
+  "coral.ide.websocket.port": 7777,
+  "coral.agents.preload": [
+    "project_architect",
+    "backend_developer",
+    "frontend_developer",
+    "database_specialist",
+    "api_designer",
+    "ai_ml_specialist",
+    "qa_testing",
+    "security_specialist"
+  ],
+  "coral.project.preferredAgents": [
+    "backend_developer",
+    "api_designer",
+    "ai_ml_specialist"
+  ],
+  "python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.ruffEnabled": true,
+  "python.formatting.provider": "black",
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "editor.quickSuggestions": {
+      "strings": true
+    }
+  },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    ".coral/.cache": true
+  }
+}

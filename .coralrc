@@ -1,0 +1,27 @@
+# CoralCollective Configuration for This Project
+# Generated: Tue Nov 18 21:39:49 PST 2025
+
+# Project Information
+PROJECT_NAME="Optimus"
+PROJECT_TYPE="unknown"
+PROJECT_ROOT="/Users/nathanial.smalley/projects/Optimus"
+
+# CoralCollective Settings
+CORAL_DIR=".coral"
+CORAL_ISOLATED=true  # Run in isolated mode, don't affect project files
+
+# Agent Preferences (customize based on your project)
+DEFAULT_AGENTS="backend_developer,frontend_developer,qa_testing"
+SKIP_AGENTS=""  # Comma-separated list of agents to skip
+
+# Model Preferences (for cost optimization)
+PREFER_FAST_MODELS=false  # Use faster/cheaper models when possible
+MAX_TOKEN_BUDGET=50000    # Maximum tokens per session
+
+# Integration Settings
+USE_EXISTING_TESTS=true   # Try to use existing test framework
+USE_EXISTING_DOCS=true    # Try to use existing documentation structure
+RESPECT_GITIGNORE=true    # Don't modify files in .gitignore
+
+# Custom Settings for Your Project
+# Add any project-specific settings here

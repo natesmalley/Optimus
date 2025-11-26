@@ -1,0 +1,46 @@
+project:
+  name: .coral
+  created_at: '2025-11-18T21:58:29.850927'
+  last_modified: '2025-11-18T21:58:29.859323'
+  current_phase: planning
+  status: active
+agents:
+  completed: []
+  in_progress:
+  - agent_id: project_architect
+    task: "# Architect Task for Optimus\n\nDesign the complete technical architecture\
+      \ for Optimus - a Project Intelligence & Monetization Platform with these core\
+      \ capabilities:\n\n## System Requirements:\n\n1. **Project Discovery & Monitoring**\n\
+      \   - Auto-discover all projects in ~/projects directory\n   - Detect which\
+      \ projects are currently running (processes, ports, containers)\n   - Analyze\
+      \ tech stack, dependencies, and health status\n   - Monitor git activity and\
+      \ collaboration\n\n2. **Intelligence & Analysis**\n   - Classify projects by\
+      \ type, stage, and monetization potential\n   - Map dependencies between projects\n\
+      \   - Assess technical debt and security vulnerabilities\n   - Identify performance\
+      \ bottlenecks\n\n3. **Monetization Advisor**\n   - Analyze revenue potential\
+      \ of each project\n   - Suggest business models (SaaS, licensing, consulting)\n\
+      \   - Provide market alignment recommendations\n   - Calculate ROI projections\n\
+      \n4. **Troubleshooting Assistant**\n   - Pattern recognition for common errors\n\
+      \   - Cross-project solution learning\n   - Automated fix attempts\n   - Context-aware\
+      \ recommendations\n\n5. **Future Voice Interface**\n   - Prepare architecture\
+      \ for eventual Optimus Prime voice interaction\n   - NLP-ready command processing\n\
+      \   - Conversational context management\n\n## Technical Constraints:\n- Must\
+      \ handle 50+ projects efficiently\n- Real-time monitoring with minimal overhead\n\
+      - Scalable to handle large codebases\n- Secure handling of sensitive project\
+      \ data\n- API-first design for integrations\n\n## Deliverables Needed:\n1. System\
+      \ architecture diagram (component relationships)\n2. Database schema design\n\
+      3. API endpoint structure\n4. Service breakdown (microservices vs monolith decision)\n\
+      5. Technology recommendations for each component\n6. Security architecture\n\
+      7. Deployment strategy\n8. Development phases with milestones\n\nPlease provide\
+      \ a comprehensive technical architecture that can start simple but scale to\
+      \ support the full vision including future voice interaction."
+    started_at: '2025-11-18T21:58:29.859318'
+    context: {}
+  pending: []
+artifacts: []
+context: {}
+handoffs: []
+metrics:
+  total_agents_run: 0
+  success_rate: 0.0
+  total_time_minutes: 0

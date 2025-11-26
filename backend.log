@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/Users/nathanial.smalley/projects/Optimus/run_backend.py", line 8, in <module>
+    from src.config import get_settings
+  File "/Users/nathanial.smalley/projects/Optimus/src/config.py", line 12, in <module>
+    from pydantic_settings import BaseSettings
+ModuleNotFoundError: No module named 'pydantic_settings'

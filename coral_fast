@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""
+Fast CoralCollective launcher for Optimus project
+Optimized with caching and async execution
+"""
+import asyncio
+import sys
+import os
+from pathlib import Path
+
+# Add .coral to path
+sys.path.insert(0, str(Path(__file__).parent / '.coral'))
+os.chdir(Path(__file__).parent)
+
+async def main():
+    # Import optimized modules
+    from core.async_agent_runner import AsyncAgentRunner, AgentRequest
+    from core.cache_manager import AsyncCacheManager
+    
+    # Initialize with caching
+    runner = AsyncAgentRunner(cache_size=100, max_concurrent=10)
+    await runner.initialize()
+    
+    # Preload common agents for Optimus project
+    await runner.preload_agents([
+        'project_architect',
+        'backend_developer',
+        'frontend_developer', 
+        'database_specialist',
+        'api_designer',
+        'qa_testing'
+    ])
+    
+    if len(sys.argv) > 2 and sys.argv[1] == 'run':
+        agent_id = sys.argv[2]
+        task = ' '.join(sys.argv[3:]) if len(sys.argv) > 3 else ''
+        
+        request = AgentRequest(agent_id=agent_id, task=task)
+        result = await runner.run_agent(request)
+        
+        print(f"\n🤖 Optimus - Agent: {agent_id}")
+        print(f"📝 Task: {task}")
+        print(f"\n{result.get('result', 'Agent execution completed')}")
+        print(f"\n⚡ Execution time: {result.get('execution_time', 0):.2f}s")
+        
+        # Show cache stats
+        metrics = runner.get_metrics()
+        if metrics['cache_hits'] > 0:
+            print(f"💾 Cache performance: {metrics.get('cache_hit_ratio', 0):.0%} hit rate")
+            
+    elif len(sys.argv) > 1 and sys.argv[1] == 'parallel':
+        # Parse parallel tasks
+        tasks = []
+        for arg in sys.argv[2:]:
+            if ':' in arg:
+                agent_id, task = arg.split(':', 1)
+                tasks.append(AgentRequest(agent_id=agent_id, task=task))
+        
+        if tasks:
+            print(f"🚀 Optimus - Running {len(tasks)} agents in parallel...")
+            results = await runner.run_parallel_agents(tasks)
+            
+            for i, result in enumerate(results):
+                if isinstance(result, dict):
+                    agent_id = tasks[i].agent_id
+                    print(f"\n✅ {agent_id}: {result.get('status', 'completed')}")
+                
+            print(f"\n⚡ Parallel execution completed")
+            
+    elif len(sys.argv) > 1 and sys.argv[1] == 'init':
+        # Initialize Optimus project with CoralCollective
+        print("🤖 Initializing Optimus Project with CoralCollective")
+        print("=" * 50)
+        
+        request = AgentRequest(
+            agent_id='project_architect',
+            task='Design the architecture for Optimus - an AI-powered application platform'
+        )
+        result = await runner.run_agent(request)
+        
+        print("\n📋 Project Architecture:")
+        print(result.get('result', ''))
+        print("\n✅ Optimus project initialized!")
+        print("\nNext steps:")
+        print("1. Review the architecture above")
+        print("2. Run: ./coral_fast run technical_writer_phase1 'Create requirements'")
+        print("3. Run: ./coral_fast run backend_developer 'Implement core API'")
+        
+    else:
+        print("🤖 Optimus - CoralCollective Fast Launcher")
+        print("=" * 50)
+        print("\nCommands:")
+        print("  ./coral_fast init                    # Initialize Optimus project")
+        print("  ./coral_fast run AGENT_ID TASK       # Run single agent")
+        print("  ./coral_fast parallel 'a1:t1' 'a2:t2' # Run parallel agents")
+        print("\nExamples:")
+        print("  ./coral_fast run backend_developer 'Create user authentication'")
+        print("  ./coral_fast run api_designer 'Design REST endpoints'")
+        print("  ./coral_fast parallel 'backend:API' 'frontend:UI' 'database:Schema'")
+        print("\n📊 Available Agents:")
+        agents = list(runner.agent_cache.keys())[:8]
+        for agent_id in agents:
+            print(f"  • {agent_id}")
+        print(f"  ... and {len(runner.agent_cache) - 8} more")
+
+if __name__ == "__main__":
+    # Use faster event loop if available
+    try:
+        import uvloop
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    except ImportError:
+        pass
+    
+    asyncio.run(main())
