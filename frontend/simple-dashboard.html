@@ -22,10 +22,29 @@
                     rows="3" 
                     placeholder="Enter your question... (e.g., 'Should we use microservices?')"></textarea>
                 
-                <div class="mt-4 grid grid-cols-3 gap-4">
-                    <input type="number" id="team_size" placeholder="Team Size" value="5" class="p-2 bg-gray-700 rounded">
-                    <input type="number" id="budget" placeholder="Budget" value="50000" class="p-2 bg-gray-700 rounded">
-                    <input type="text" id="timeline" placeholder="Timeline" value="3 months" class="p-2 bg-gray-700 rounded">
+                <div class="mt-4">
+                    <p class="text-sm text-gray-400 mb-2">Optional Context (helps personas provide better recommendations):</p>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-500 block mb-1">Team Size</label>
+                            <input type="number" id="team_size" placeholder="Number of people" value="5" 
+                                   class="p-2 bg-gray-700 rounded w-full text-white" 
+                                   title="How many people will work on this?">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 block mb-1">Budget ($)</label>
+                            <input type="number" id="budget" placeholder="Available budget" value="50000" 
+                                   class="p-2 bg-gray-700 rounded w-full text-white"
+                                   title="Budget available for this decision">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 block mb-1">Timeline</label>
+                            <input type="text" id="timeline" placeholder="e.g., 3 months" value="3 months" 
+                                   class="p-2 bg-gray-700 rounded w-full text-white"
+                                   title="Time available for implementation">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 italic">💡 Tip: These fields provide context but are optional. The Council will analyze your question regardless.</p>
                 </div>
                 
                 <button onclick="submitDeliberation()" class="mt-4 bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded font-semibold">
