@@ -5,3 +5,4 @@
 .coral/metrics/
 .coral/__pycache__/
 .coral/*.pyc
+optimus.log

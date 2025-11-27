@@ -14,6 +14,23 @@ from .audit import ActionHistory
 from .patterns import Pattern
 from .tasks import ScheduledTask
 from .conversation import ConversationContext
+from .scanner import ScanResult, ScanJob, TechnologyUsage, SecurityPattern
+from .memory import (
+    DeliberationMemory, 
+    PersonaResponseMemory, 
+    ContextMemory, 
+    PersonaLearningPattern, 
+    MemoryAssociation, 
+    MemoryMetrics
+)
+from .troubleshooting import (
+    Solution,
+    ErrorContext,
+    FixAttempt,
+    SolutionEffectiveness,
+    KnowledgeBase,
+    TroubleshootingSession
+)
 
 __all__ = [
     "Base",
@@ -29,4 +46,20 @@ __all__ = [
     "Pattern",
     "ScheduledTask",
     "ConversationContext",
+    "ScanResult",
+    "ScanJob",
+    "TechnologyUsage",
+    "SecurityPattern",
+    "DeliberationMemory",
+    "PersonaResponseMemory", 
+    "ContextMemory", 
+    "PersonaLearningPattern", 
+    "MemoryAssociation", 
+    "MemoryMetrics",
+    "Solution",
+    "ErrorContext",
+    "FixAttempt",
+    "SolutionEffectiveness",
+    "KnowledgeBase",
+    "TroubleshootingSession",
 ]

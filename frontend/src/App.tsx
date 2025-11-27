@@ -6,6 +6,7 @@ import Dashboard from '@/pages/Dashboard';
 import ProjectDetail from '@/pages/ProjectDetail';
 import SystemMonitor from '@/pages/SystemMonitor';
 import Analytics from '@/pages/Analytics';
+import { Deliberation } from '@/pages/Deliberation';
 import ToastProvider from '@/components/ui/ToastProvider';
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
           <Route path="projects/:id" element={<ProjectDetail />} />
           <Route path="monitor" element={<SystemMonitor />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="deliberation" element={<Deliberation />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

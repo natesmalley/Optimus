@@ -410,7 +410,7 @@ class OptimizedMemorySystem:
               AND timestamp_unix > ?  -- Only consider recent memories for performance
             ORDER BY importance DESC, access_count DESC, timestamp_unix DESC
             LIMIT ?
-        ''')
+        '''
         
         # Get memories from last 6 months for initial filtering
         six_months_ago = int((datetime.now() - timedelta(days=180)).timestamp())

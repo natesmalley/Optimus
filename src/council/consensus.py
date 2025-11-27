@@ -174,7 +174,21 @@ class ConsensusEngine:
         
         # Calculate overall confidence
         avg_confidence = support_data['confidence_sum'] / len(support_data['supporters'])
-        overall_confidence = avg_confidence * agreement
+        
+        # Don't just multiply by agreement - that penalizes thoughtful disagreement
+        # Instead, weight by the strength of the leading recommendation
+        if agreement >= 0.6:
+            # High agreement: full confidence
+            overall_confidence = avg_confidence
+        elif agreement >= 0.4:
+            # Moderate agreement: slight reduction
+            overall_confidence = avg_confidence * 0.85
+        elif agreement >= 0.2:
+            # Low agreement but still a clear leader: moderate confidence
+            overall_confidence = avg_confidence * 0.7
+        else:
+            # Very low agreement: significant reduction
+            overall_confidence = avg_confidence * 0.5
         
         # Determine priority
         priority = self._determine_consensus_priority(responses, agreement)

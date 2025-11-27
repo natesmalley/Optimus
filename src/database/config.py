@@ -153,10 +153,9 @@ class DatabaseManager:
         if self._initialized:
             return
         
-        # Initialize PostgreSQL async engine
+        # Initialize PostgreSQL async engine  
         self._postgres_engine = create_async_engine(
             self.config.postgres_url,
-            poolclass=QueuePool,
             pool_size=self.config.postgres_pool_size,
             max_overflow=self.config.postgres_max_overflow,
             pool_timeout=self.config.postgres_pool_timeout,

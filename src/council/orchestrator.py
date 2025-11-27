@@ -16,6 +16,11 @@ from .blackboard import Blackboard, BlackboardEntry, EntryType
 from .persona import Persona, PersonaResponse
 from .consensus import ConsensusEngine, ConsensusResult, ConsensusMethod
 from .personas import CORE_PERSONAS
+from .tool_integration import PersonaToolIntegration, ToolCapability
+# Memory and knowledge graph integration - to be connected later
+# from .memory_integration import get_optimized_memory_system
+# from .knowledge_graph_integration import get_optimized_knowledge_graph
+from .knowledge_graph import NodeType, EdgeType
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +95,13 @@ class Orchestrator:
         self.use_all_personas = use_all_personas
         self.custom_personas = custom_personas or []
         
+        # Tool integration
+        self.tool_integration: Optional[PersonaToolIntegration] = None
+        
+        # Memory and Knowledge Graph integration
+        self.memory_system = None  # Will be initialized in initialize()
+        self.knowledge_graph = None  # Will be connected when integration is fixed
+        
     async def initialize(self):
         """Initialize the council with personas"""
         if self.is_initialized:
@@ -98,18 +110,58 @@ class Orchestrator:
         logger.info("Initializing Optimus Council of Minds...")
         
         # Initialize core personas
-        for PersonaClass in CORE_PERSONAS:
-            persona = PersonaClass()
-            persona.connect_blackboard(self.blackboard)
-            self.personas[persona.persona_id] = persona
-            logger.info(f"Initialized {persona.name}")
+        persona_classes = CORE_PERSONAS
         
-        # Initialize custom personas if provided
+        if self.use_all_personas:
+            from .personas import ALL_PERSONAS
+            persona_classes = ALL_PERSONAS
+            
+        # Create and register personas
+        for PersonaClass in persona_classes:
+            try:
+                persona = PersonaClass()
+                persona.connect_blackboard(self.blackboard)
+                self.personas[persona.persona_id] = persona
+                logger.info(f"Initialized {persona.name}")
+            except Exception as e:
+                logger.error(f"Failed to initialize {PersonaClass.__name__}: {e}")
+        
+        # Add custom personas if any
         for PersonaClass in self.custom_personas:
-            persona = PersonaClass()
-            persona.connect_blackboard(self.blackboard)
-            self.personas[persona.persona_id] = persona
-            logger.info(f"Initialized custom persona: {persona.name}")
+            try:
+                persona = PersonaClass()
+                persona.connect_blackboard(self.blackboard)
+                self.personas[persona.persona_id] = persona
+                logger.info(f"Initialized custom persona {persona.name}")
+            except Exception as e:
+                logger.error(f"Failed to initialize custom persona: {e}")
+        
+        # Initialize tool integration
+        try:
+            self.tool_integration = PersonaToolIntegration()
+            await self.tool_integration.initialize()
+            
+            # Add tool capabilities to all personas
+            for persona in self.personas.values():
+                tool_capability = ToolCapability(
+                    tool_integration=self.tool_integration,
+                    persona_context={"persona_id": persona.persona_id, "name": persona.name}
+                )
+                persona.add_tool_capabilities(tool_capability)
+            
+            logger.info("Tool integration initialized and connected to personas")
+        except Exception as e:
+            logger.warning(f"Tool integration failed to initialize: {e}")
+            # Continue without tools - not critical for basic operation
+
+        # Initialize memory system
+        try:
+            from .memory_system import get_memory_system
+            self.memory_system = await get_memory_system()
+            logger.info("Memory system initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize memory system: {e}")
+            # Continue without memory system - not critical for basic operation
         
         self.is_initialized = True
         logger.info(f"Council initialized with {len(self.personas)} personas")
@@ -135,12 +187,15 @@ class Orchestrator:
         # Select personas for this deliberation
         selected_personas = self._select_personas(request)
         
+        # Recall relevant memories for context enhancement
+        enhanced_context = await self._enhance_context_with_memories(request, selected_personas)
+        
         # Post initial query to blackboard
         query_entry = BlackboardEntry(
             persona_id="orchestrator",
             entry_type=EntryType.QUESTION,
             content=request.query,
-            metadata=request.metadata,
+            metadata=enhanced_context,
             tags={'query', 'deliberation'}
         )
         await self.blackboard.post(topic, query_entry)
@@ -195,6 +250,9 @@ class Orchestrator:
         
         # Store in history
         self.deliberation_history.append(result)
+        
+        # Post-deliberation hooks: store memories and update knowledge graph
+        await self._post_deliberation_hooks(result)
         
         logger.info(f"Deliberation complete: {consensus.decision} "
                    f"(confidence: {consensus.confidence:.0%}, "
@@ -487,3 +545,195 @@ class Orchestrator:
             explanation += f"**Agreement Level:** {consensus.metadata.get('agreement_level', 0):.0%}\n"
         
         return explanation
+    
+    async def _enhance_context_with_memories(self, 
+                                           request: DeliberationRequest,
+                                           personas: List[Persona]) -> Dict[str, Any]:
+        """
+        Enhance request context with relevant memories from personas
+        """
+        enhanced_context = request.context.copy()
+        enhanced_context['remembered_experiences'] = []
+        
+        if not self.memory_system:
+            return enhanced_context
+        
+        try:
+            # Import the memory query class
+            from .memory_system import MemoryQuery
+            
+            # Recall memories using the new system
+            memory_query = MemoryQuery(
+                query_text=request.query,
+                context=request.context,
+                topic=request.topic,
+                limit=5,
+                min_relevance=0.3,
+                include_context=True
+            )
+            
+            recall_result = await self.memory_system.recall_memories(memory_query)
+            
+            if recall_result.memories:
+                # Group memories by topic/similarity for context
+                memories_context = []
+                for memory, relevance in zip(recall_result.memories, recall_result.relevance_scores):
+                    memories_context.append({
+                        'query': memory.query,
+                        'decision': memory.consensus_result.get('decision', ''),
+                        'confidence': memory.consensus_confidence,
+                        'topic': memory.topic,
+                        'relevance': relevance,
+                        'timestamp': memory.created_at.isoformat(),
+                        'importance': memory.importance_score
+                    })
+                
+                enhanced_context['remembered_experiences'] = memories_context
+                enhanced_context['memory_context_available'] = True
+                
+                logger.debug(f"Enhanced context with {len(memories_context)} relevant memories")
+                
+        except Exception as e:
+            logger.warning(f"Failed to recall memories for context enhancement: {e}")
+            enhanced_context['memory_context_available'] = False
+        
+        return enhanced_context
+    
+    async def _post_deliberation_hooks(self, result: DeliberationResult):
+        """
+        Post-deliberation processing: store memories and update knowledge graph
+        """
+        try:
+            # Store memories for each persona
+            await self._store_deliberation_memories(result)
+            
+            # Update knowledge graph
+            await self._update_knowledge_graph(result)
+            
+            logger.debug(f"Post-deliberation hooks completed for topic: {result.blackboard_topic}")
+            
+        except Exception as e:
+            logger.error(f"Error in post-deliberation hooks: {e}", exc_info=True)
+    
+    async def _store_deliberation_memories(self, result: DeliberationResult):
+        """
+        Store deliberation results as memories using the new memory system
+        """
+        if not self.memory_system:
+            logger.warning("Memory system not available - skipping memory storage")
+            return
+            
+        try:
+            # Store the complete deliberation in the memory system
+            await self.memory_system.store_deliberation(result.request, result)
+            logger.debug(f"Stored deliberation memory for topic: {result.blackboard_topic}")
+            
+        except Exception as e:
+            logger.error(f"Failed to store deliberation memories: {e}", exc_info=True)
+    
+    async def _update_knowledge_graph(self, result: DeliberationResult):
+        """
+        Update knowledge graph with concepts and relationships from deliberation
+        """
+        try:
+            # Extract key concepts from the query
+            query_concepts = await self._extract_concepts(result.request.query)
+            
+            # Create or update nodes for key concepts
+            concept_nodes = []
+            for concept in query_concepts:
+                node = await self.knowledge_graph.add_node(
+                    name=concept,
+                    node_type=NodeType.CONCEPT,
+                    importance=0.7,  # Concepts from deliberations are fairly important
+                    attributes={'source': 'deliberation', 'topic': result.blackboard_topic}
+                )
+                concept_nodes.append(node)
+            
+            # Create decision node
+            decision_node = await self.knowledge_graph.add_node(
+                name=f"Decision: {result.consensus.decision[:50]}",
+                node_type=NodeType.DECISION,
+                importance=min(1.0, result.consensus.confidence * 1.1),
+                attributes={
+                    'decision': result.consensus.decision,
+                    'confidence': result.consensus.confidence,
+                    'agreement_level': result.consensus.agreement_level,
+                    'timestamp': result.timestamp.isoformat()
+                }
+            )
+            
+            # Link concepts to decision
+            for concept_node in concept_nodes:
+                await self.knowledge_graph.add_edge(
+                    source_id=concept_node.id,
+                    target_id=decision_node.id,
+                    edge_type=EdgeType.LEADS_TO,
+                    weight=result.consensus.confidence,
+                    confidence=0.8
+                )
+            
+            # Create persona expertise connections
+            for response in result.persona_responses:
+                # Find or create persona node
+                persona_node = await self.knowledge_graph.add_node(
+                    name=f"Persona: {response.persona_id}",
+                    node_type=NodeType.PERSON,
+                    importance=0.8,
+                    attributes={'persona_type': 'ai_assistant'}
+                )
+                
+                # Link persona to decision with confidence as weight
+                await self.knowledge_graph.add_edge(
+                    source_id=persona_node.id,
+                    target_id=decision_node.id,
+                    edge_type=EdgeType.INFLUENCES,
+                    weight=response.confidence,
+                    confidence=response.confidence,
+                    attributes={
+                        'recommendation': response.recommendation,
+                        'concerns': response.concerns[:3],  # Top 3 concerns
+                        'opportunities': response.opportunities[:3]  # Top 3 opportunities
+                    }
+                )
+                
+                # Link persona to concepts they have expertise in
+                persona = self.personas.get(response.persona_id)
+                if persona:
+                    for domain in persona.expertise_domains[:3]:  # Top 3 domains
+                        domain_node = await self.knowledge_graph.add_node(
+                            name=domain,
+                            node_type=NodeType.SKILL,
+                            importance=0.6
+                        )
+                        
+                        await self.knowledge_graph.add_edge(
+                            source_id=persona_node.id,
+                            target_id=domain_node.id,
+                            edge_type=EdgeType.BELONGS_TO,
+                            weight=0.8,
+                            confidence=0.9
+                        )
+            
+            logger.debug(f"Updated knowledge graph with {len(concept_nodes)} concepts and 1 decision")
+            
+        except Exception as e:
+            logger.error(f"Failed to update knowledge graph: {e}", exc_info=True)
+    
+    async def _extract_concepts(self, text: str) -> List[str]:
+        """
+        Extract key concepts from text for knowledge graph
+        Simple keyword extraction - could be enhanced with NLP
+        """
+        # Simple approach: extract meaningful words
+        import re
+        
+        # Remove common words and extract meaningful terms
+        stop_words = {'the', 'is', 'at', 'which', 'on', 'a', 'an', 'and', 'or', 'but', 'in', 'with', 'to', 'for', 'of', 'as', 'by', 'from', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'when', 'where', 'why', 'how', 'should', 'would', 'could', 'can', 'will', 'may', 'might', 'must'}
+        
+        words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+        concepts = [word for word in words if len(word) > 3 and word not in stop_words]
+        
+        # Return top 5 unique concepts
+        unique_concepts = list(dict.fromkeys(concepts))[:5]
+        return unique_concepts

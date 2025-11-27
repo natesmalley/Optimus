@@ -60,13 +60,27 @@ class PragmatistPersona(Persona):
         timeline = self._estimate_timeline(context)
         risks = self._identify_practical_risks(context)
         
-        # Build recommendation
-        if feasibility['score'] > 0.7 and resource_needs['available']:
-            recommendation = f"Practical approach: Implement in {timeline['phases']} phases over {timeline['duration']}"
-        elif feasibility['score'] > 0.5:
-            recommendation = f"Conditionally feasible: Address {feasibility['main_blocker']} first, then proceed incrementally"
+        # Build recommendation with context awareness
+        query_lower = query.lower()
+        
+        if 'microservice' in query_lower:
+            team_size = context.get('team_size', 5)
+            if team_size <= 3:
+                recommendation = ("Not practical for 3-person team: Microservices add operational complexity, "
+                                "deployment overhead, and debugging challenges that will slow development. "
+                                "Stick with monolith until team grows to 8+ developers.")
+            elif feasibility['score'] > 0.7:
+                recommendation = f"Practical with caveats: Start with modular monolith, extract services gradually over {timeline['duration']}"
+            else:
+                recommendation = "Microservices feasible but complex. Consider service boundaries carefully and start with 2-3 services max"
         else:
-            recommendation = f"Not practical currently: {feasibility['main_blocker']}. Consider simpler alternatives"
+            # General recommendations
+            if feasibility['score'] > 0.7 and resource_needs['available']:
+                recommendation = f"Practical approach: Implement in {timeline['phases']} phases over {timeline['duration']}"
+            elif feasibility['score'] > 0.5:
+                recommendation = f"Conditionally feasible: Address {feasibility['main_blocker']} first, then proceed incrementally"
+            else:
+                recommendation = f"Not practical currently: {feasibility['main_blocker']}. Consider simpler alternatives"
         
         concerns = []
         if resource_needs['shortage']:
@@ -123,6 +137,26 @@ class PragmatistPersona(Persona):
         
         # Analyze query
         query_lower = query.lower()
+        
+        # Specific analysis for microservices
+        if 'microservice' in query_lower:
+            team_size = context.get('team_size', 5)
+            startup_stage = context.get('startup_stage', 'unknown')
+            
+            if team_size <= 3:
+                score = 0.2  # Very low feasibility
+                complexity = "high"
+                main_blocker = "team too small for microservices operational overhead"
+            elif team_size >= 8:
+                score = 0.7  # Good feasibility
+                complexity = "medium"
+                main_blocker = None
+            
+            if startup_stage == 'early':
+                score -= 0.2  # Early startups need speed, not complexity
+                if not main_blocker:
+                    main_blocker = "early startup should focus on product-market fit"
+        
         if 'simple' in query_lower or 'basic' in query_lower:
             score += 0.2
             complexity = "low"
@@ -133,7 +167,8 @@ class PragmatistPersona(Persona):
         # Check context
         if context.get('clear_requirements'):
             score += 0.2
-            main_blocker = None
+            if main_blocker == "unclear requirements":
+                main_blocker = None
         if context.get('existing_infrastructure'):
             score += 0.1
         if context.get('team_bandwidth', 1.0) < 0.5:

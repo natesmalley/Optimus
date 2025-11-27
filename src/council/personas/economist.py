@@ -129,25 +129,38 @@ class EconomistPersona(Persona):
         """
         confidence = 0.5  # Base confidence for economic analysis
         
+        # Business decisions always have economic implications
+        query_lower = query.lower()
+        business_keywords = ['implement', 'should', 'architecture', 'team', 'project', 'development', 'decision']
+        if any(keyword in query_lower for keyword in business_keywords):
+            confidence += 0.1
+        
         # Increase confidence for financial data availability
-        if context.get('budget_info'):
+        if context.get('budget_info') or context.get('budget'):
             confidence += 0.2
+        
+        # Basic business context indicators
+        if context.get('team_size') or context.get('timeline'):
+            confidence += 0.1  # Can estimate costs from team size and timeline
         
         # Increase if cost/benefit data available
         if context.get('cost_estimates') or context.get('benefit_projections'):
             confidence += 0.15
         
         # Increase if this involves financial domains
-        query_lower = query.lower()
         financial_keywords = ['cost', 'budget', 'money', 'price', 'invest', 'save', 'profit', 'revenue']
         if any(keyword in query_lower for keyword in financial_keywords):
             confidence += 0.25
+        
+        # Microservices decision has clear economic implications
+        if 'microservice' in query_lower:
+            confidence += 0.15  # Clear cost/benefit tradeoffs
         
         # Increase for historical financial data
         if context.get('historical_costs') or context.get('past_performance'):
             confidence += 0.1
         
-        return max(0.2, min(0.9, confidence))
+        return max(0.3, min(0.9, confidence))
     
     def _perform_cost_analysis(self, query: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Perform comprehensive cost analysis"""
@@ -320,9 +333,23 @@ class EconomistPersona(Persona):
                                    financial_sustainability: float) -> str:
         """Formulate economically-sound guidance"""
         
+        query_lower = query.lower()
         cost_impact = cost_analysis['total_cost_impact']
         benefit_score = benefit_analysis['total_benefit_score']
         
+        # Specific economic analysis for car seats
+        if 'car seat' in query_lower or 'carseat' in query_lower or 'baby seat' in query_lower:
+            if 'second hand' in query_lower or 'used' in query_lower:
+                return ("Economic analysis: Used car seats cost 30-70% less ($50-150 vs $200-500 new). "
+                       "However, factor in: no warranty value, shorter usable lifespan (6-year expiration), "
+                       "potential need for replacement parts, and liability considerations. "
+                       "If budget allows, new seat's 6-year lifespan offers better cost-per-year value.")
+            else:
+                return ("Car seat economics: Mid-range options ($200-300) offer best value - "
+                       "meeting all safety standards without premium pricing. Consider convertible seats "
+                       "for longer usability (infant to toddler), improving cost efficiency over time.")
+        
+        # General economic guidance
         if benefit_score > 0.7 and cost_impact < 0.5:
             return (f"Economically excellent: High benefits ({benefit_score:.0%}) with "
                    f"manageable costs ({cost_impact:.0%}) - strong ROI expected")

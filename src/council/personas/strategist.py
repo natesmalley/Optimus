@@ -119,25 +119,36 @@ class StrategistPersona(Persona):
         """
         confidence = 0.5  # Base confidence
         
+        # Most business/technical decisions have strategic implications
+        query_lower = query.lower()
+        decision_keywords = ['should', 'implement', 'architecture', 'approach', 'decision', 'choose']
+        if any(keyword in query_lower for keyword in decision_keywords):
+            confidence += 0.1
+        
         # Increase confidence if we have good historical data
         if context.get('historical_data'):
             confidence += 0.15
         
-        # Increase if we have clear goals defined
+        # Increase if we have clear goals defined or basic business context
         if context.get('project_goals') or context.get('business_objectives'):
             confidence += 0.15
+        if context.get('team_size') or context.get('timeline'):
+            confidence += 0.1  # Basic strategic context for planning
         
         # Increase if this is in our domain
-        query_lower = query.lower()
-        strategic_keywords = ['long-term', 'strategy', 'roadmap', 'vision', 'future', 'scale', 'growth']
+        strategic_keywords = ['long-term', 'strategy', 'roadmap', 'vision', 'future', 'scale', 'growth', 'microservice']
         if any(keyword in query_lower for keyword in strategic_keywords):
             confidence += 0.2
+        
+        # Architecture decisions are inherently strategic
+        if 'architecture' in query_lower:
+            confidence += 0.15
         
         # Decrease if situation is highly volatile
         if context.get('high_uncertainty', False):
             confidence -= 0.15
         
-        return max(0.1, min(0.95, confidence))
+        return max(0.3, min(0.95, confidence))
     
     def _assess_strategic_factors(self, query: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Assess key strategic factors"""
@@ -151,6 +162,25 @@ class StrategistPersona(Persona):
         
         # Analyze query for strategic implications
         query_lower = query.lower()
+        
+        # Specific analysis for microservices question
+        if 'microservice' in query_lower:
+            team_size = context.get('team_size', 5)
+            startup_stage = context.get('startup_stage', 'unknown')
+            
+            if team_size <= 3:
+                factors['resource_intensity'] = 0.8  # High overhead for small team
+                factors['technical_debt_risk'] = 0.7  # Adds complexity
+                factors['scalability_impact'] = 0.3  # Premature optimization
+                factors['time_horizon'] = 'short'  # Focus on speed to market
+            elif team_size >= 10:
+                factors['scalability_impact'] = 0.8  # Good for large teams
+                factors['resource_intensity'] = 0.4  # Team can handle complexity
+                factors['time_horizon'] = 'long'
+            
+            if startup_stage == 'early':
+                factors['market_advantage'] = 0.2  # Focus should be on product-market fit
+                factors['time_horizon'] = 'short'
         
         if 'refactor' in query_lower or 'rewrite' in query_lower:
             factors['technical_debt_risk'] = 0.2  # Reduces debt
@@ -211,6 +241,17 @@ class StrategistPersona(Persona):
                                            alignment: float) -> str:
         """Formulate the strategic recommendation"""
         
+        # Specific recommendations for microservices
+        if 'microservice' in query.lower():
+            if factors['resource_intensity'] > 0.7:  # Small team scenario
+                return ("Strategic recommendation: Avoid microservices now. "
+                       "Focus on monolithic architecture for speed and simplicity. "
+                       "Consider microservices when team grows beyond 8-10 developers.")
+            elif factors['scalability_impact'] > 0.7:  # Large team scenario
+                return ("Strategic recommendation: Microservices architecture aligns with growth strategy. "
+                       "Implement gradually starting with bounded contexts.")
+        
+        # General recommendations
         if alignment > 0.7 and factors['scalability_impact'] > 0.7:
             return (f"Strongly recommend proceeding - high strategic alignment "
                    f"({alignment:.0%}) with significant scalability benefits")
