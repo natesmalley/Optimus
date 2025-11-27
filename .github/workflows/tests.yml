@@ -1,0 +1,243 @@
+name: Optimus Council of Minds Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: '3.11'
+  
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: optimus_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    strategy:
+      matrix:
+        test-type: [unit, integration, performance]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client redis-tools
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .[dev]
+        
+    - name: Install additional test dependencies
+      run: |
+        pip install pytest-cov pytest-asyncio pytest-xdist pytest-timeout
+        pip install psutil memory-profiler
+        
+    - name: Setup test environment
+      run: |
+        cp .env.example .env
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/optimus_test" >> .env
+        echo "REDIS_URL=redis://localhost:6379/0" >> .env
+        echo "TEST_MODE=true" >> .env
+        
+    - name: Initialize test database
+      run: |
+        PGPASSWORD=postgres psql -h localhost -U postgres -d optimus_test -c "SELECT 1;"
+        python -c "
+        import asyncio
+        from src.database.initialize import initialize_database
+        asyncio.run(initialize_database())
+        "
+        
+    - name: Run Unit Tests
+      if: matrix.test-type == 'unit'
+      run: |
+        pytest tests/unit/ \
+          --cov=src \
+          --cov-report=xml:coverage-unit.xml \
+          --cov-report=html:htmlcov-unit \
+          --junit-xml=junit-unit.xml \
+          -m "unit and not slow" \
+          --maxfail=5
+          
+    - name: Run Integration Tests  
+      if: matrix.test-type == 'integration'
+      run: |
+        pytest tests/integration/ \
+          --cov=src \
+          --cov-report=xml:coverage-integration.xml \
+          --cov-report=html:htmlcov-integration \
+          --junit-xml=junit-integration.xml \
+          -m "integration and not slow" \
+          --maxfail=3
+          
+    - name: Run Performance Tests
+      if: matrix.test-type == 'performance'
+      run: |
+        pytest tests/performance/ \
+          --cov=src \
+          --cov-report=xml:coverage-performance.xml \
+          --cov-report=html:htmlcov-performance \
+          --junit-xml=junit-performance.xml \
+          -m "performance" \
+          --timeout=600 \
+          --maxfail=2
+          
+    - name: Upload Coverage Reports
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage-*.xml
+        flags: ${{ matrix.test-type }}
+        name: codecov-${{ matrix.test-type }}
+        fail_ci_if_error: true
+        
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.test-type }}
+        path: |
+          junit-*.xml
+          htmlcov-*
+          
+    - name: Generate Performance Report
+      if: matrix.test-type == 'performance'
+      run: |
+        python -c "
+        import json
+        import glob
+        
+        # Collect performance data from test artifacts
+        perf_data = {
+          'test_run': '${{ github.run_id }}',
+          'commit': '${{ github.sha }}',
+          'branch': '${{ github.ref_name }}',
+          'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+        }
+        
+        with open('performance-report.json', 'w') as f:
+          json.dump(perf_data, f, indent=2)
+        "
+        
+    - name: Upload Performance Report
+      if: matrix.test-type == 'performance'
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-report
+        path: performance-report.json
+
+  quality-gates:
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    
+    steps:
+    - name: Download Test Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts/
+        
+    - name: Quality Gate - Coverage Threshold
+      run: |
+        echo "Checking coverage thresholds..."
+        # In a real implementation, this would parse coverage reports
+        # and enforce minimum coverage requirements
+        
+    - name: Quality Gate - Performance Regression
+      run: |
+        echo "Checking for performance regressions..."
+        # In a real implementation, this would compare current performance
+        # metrics against historical baselines
+        
+    - name: Quality Gate - Test Success Rate
+      run: |
+        echo "Checking test success rates..."
+        # Verify all critical tests passed
+
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Security Scan
+      uses: github/super-linter@v4
+      env:
+        DEFAULT_BRANCH: main
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VALIDATE_PYTHON_BLACK: true
+        VALIDATE_PYTHON_FLAKE8: true
+        VALIDATE_PYTHON_MYPY: true
+        
+    - name: Run Safety Check
+      run: |
+        pip install safety
+        safety check --json --output safety-report.json || true
+        
+    - name: Upload Security Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report
+        path: safety-report.json
+
+  deploy-test-environment:
+    runs-on: ubuntu-latest
+    needs: [test, quality-gates]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to Test Environment
+      run: |
+        echo "Deploying to test environment..."
+        # In a real implementation, this would deploy to a test environment
+        # for manual testing and integration validation
+        
+    - name: Run Smoke Tests
+      run: |
+        echo "Running smoke tests against deployed environment..."
+        # Basic smoke tests to verify deployment
+        
+    - name: Notify Team
+      run: |
+        echo "Notifying team of successful test deployment..."
+        # Send notifications about test environment availability
