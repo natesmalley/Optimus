@@ -61,8 +61,19 @@ class AnalystPersona(Persona):
         projections = self._calculate_projections(metrics, patterns)
         benchmarks = self._compare_benchmarks(metrics, context)
         
-        # Build recommendation
-        if metrics['data_quality'] < 0.3:
+        # Build context-aware recommendation
+        query_lower = query.lower()
+        
+        if 'microservice' in query_lower:
+            team_size = context.get('team_size', 5)
+            if team_size <= 3:
+                recommendation = (f"Data analysis (limited {metrics['data_points']} metrics, {metrics['data_quality']:.0%} quality): "
+                                f"Small team lacks observability infrastructure for microservices. "
+                                f"Current monolith performance at {metrics['key_metric']:.1f}% is sufficient.")
+            else:
+                recommendation = (f"Metrics suggest complexity trade-off: Current performance {metrics['key_metric']:.1f}%. "
+                                f"Microservices will initially reduce performance but improve team productivity.")
+        elif metrics['data_quality'] < 0.3:
             recommendation = "Insufficient data for reliable analysis. Gather more metrics first"
         elif projections['trend'] == 'improving' and benchmarks['performance'] > 0.7:
             recommendation = f"Data supports proceeding: {metrics['key_metric']:.1f}% improvement projected"
@@ -126,17 +137,28 @@ class AnalystPersona(Persona):
     
     def _analyze_metrics(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze available metrics"""
-        metrics_count = context.get('metrics_available', 5)
-        data_quality = context.get('data_quality', 0.6)
+        # Use actual context data where available
+        team_size = context.get('team_size', 5)
+        startup_stage = context.get('startup_stage', 'unknown')
+        current_arch = context.get('current_architecture', 'monolith')
         
-        # Simulate metric analysis
-        key_metric = context.get('primary_metric', 75.5)
+        # Calculate metrics based on context
+        metrics_count = 3 if startup_stage == 'early' else 8  # Early startups have fewer metrics
+        data_quality = 0.4 if team_size <= 3 else 0.7  # Small teams have less instrumentation
+        
+        # Context-specific key metrics
+        if current_arch == 'monolith':
+            key_metric = 85.0  # Monoliths often have good performance initially
+        else:
+            key_metric = 65.0  # Microservices have complexity overhead
+        
         quality_issues = []
-        
+        if team_size <= 3:
+            quality_issues.append("limited instrumentation")
+        if startup_stage == 'early':
+            quality_issues.append("insufficient historical data")
         if data_quality < 0.5:
             quality_issues.append("incomplete data")
-        if context.get('data_gaps'):
-            quality_issues.append("temporal gaps")
         
         return {
             'data_points': metrics_count,

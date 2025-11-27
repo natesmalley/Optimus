@@ -206,3 +206,121 @@ export interface TechStackStats {
   percentage: number;
   health_score: number;
 }
+
+// Council of Minds types
+export interface DeliberationRequest {
+  query: string;
+  context?: Record<string, any>;
+  topic?: string;
+  required_personas?: string[];
+  consensus_method?: string;
+  timeout?: number;
+}
+
+export interface PersonaResponse {
+  persona_id: string;
+  name: string;
+  recommendation: string;
+  confidence: number;
+  reasoning: string;
+  concerns: string[];
+  opportunities: string[];
+  data_points: string[];
+  priority: string;
+}
+
+export interface ConsensusResult {
+  decision: string;
+  confidence: number;
+  agreement_level: number;
+  method_used: string;
+  supporting_personas: string[];
+  dissenting_personas: string[];
+  alternative_views: Record<string, string>;
+  reasoning: string;
+}
+
+export interface DeliberationResponse {
+  id: string;
+  query: string;
+  decision: string;
+  confidence: number;
+  agreement_level: number;
+  deliberation_time: number;
+  personas_consulted: number;
+  timestamp: string;
+  consensus_details: ConsensusResult;
+  supporting_personas: string[];
+  dissenting_personas: string[];
+  alternative_views: Record<string, string>;
+  statistics: Record<string, any>;
+}
+
+export interface PersonaInfo {
+  id: string;
+  name: string;
+  description: string;
+  expertise_domains: string[];
+  personality_traits: string[];
+}
+
+export interface CouncilPerformance {
+  timestamp: string;
+  personas: Record<string, PersonaPerformanceMetrics>;
+}
+
+export interface PersonaPerformanceMetrics {
+  name: string;
+  participation_count: number;
+  consensus_rate: number;
+  dissent_rate: number;
+  avg_confidence: number;
+  expertise_domains: string[];
+}
+
+export interface DeliberationHistory {
+  timestamp: string;
+  deliberations: Array<{
+    query: string;
+    decision: string;
+    confidence: number;
+    agreement: number;
+    time_taken: number;
+    personas_consulted: number;
+    timestamp: string;
+    consensus_details: ConsensusResult;
+    statistics: Record<string, any>;
+  }>;
+  total: number;
+}
+
+export interface CouncilHealthCheck {
+  status: string;
+  timestamp: string;
+  orchestrator: {
+    initialized: boolean;
+    personas_loaded: number;
+    deliberations_processed: number;
+  };
+  personas: Record<string, {
+    name: string;
+    blackboard_connected: boolean;
+    decisions_made: number;
+    memory_size: number;
+  }>;
+}
+
+// WebSocket message types for real-time deliberations
+export interface WebSocketMessage {
+  type: 'deliberation_start' | 'persona_response' | 'consensus_update' | 'deliberation_complete' | 'error';
+  data: any;
+  timestamp: string;
+}
+
+export interface DeliberationProgress {
+  deliberation_id: string;
+  stage: 'starting' | 'gathering_responses' | 'reaching_consensus' | 'complete';
+  personas_completed: string[];
+  total_personas: number;
+  current_confidence?: number;
+}

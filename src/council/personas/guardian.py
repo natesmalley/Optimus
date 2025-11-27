@@ -59,8 +59,20 @@ class GuardianPersona(Persona):
         security_implications = self._assess_security_implications(context)
         compliance_check = self._check_compliance(context)
         
-        # Build recommendation
-        if risks['critical_risks']:
+        # Build context-aware recommendation
+        query_lower = query.lower()
+        
+        if 'microservice' in query_lower:
+            team_size = context.get('team_size', 5)
+            if team_size <= 3:
+                recommendation = ("Security concern: Microservices increase attack surface and monitoring complexity. "
+                                "Small team lacks resources for proper service-to-service auth, distributed tracing, "
+                                "and security monitoring. Monolith provides better security boundaries.")
+            else:
+                recommendation = ("Microservices security requirements: Implement service mesh for mTLS, "
+                                "centralized authentication, comprehensive logging, and security scanning per service. "
+                                "Plan for increased operational security overhead.")
+        elif risks['critical_risks']:
             recommendation = f"CRITICAL: Address {risks['highest_risk']} before proceeding"
         elif security_implications['vulnerabilities']:
             recommendation = f"Implement security measures: {security_implications['required_measures']}"

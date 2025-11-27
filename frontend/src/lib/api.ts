@@ -15,6 +15,12 @@ import type {
   ProjectFilters,
   MetricFilters,
   MonetizationOpportunity,
+  DeliberationRequest,
+  DeliberationResponse,
+  PersonaInfo,
+  CouncilPerformance,
+  DeliberationHistory,
+  CouncilHealthCheck,
 } from '@/types';
 
 class ApiClient {
@@ -216,6 +222,49 @@ class ApiClient {
   // Get base URL for external links
   getBaseUrl(): string {
     return this.client.defaults.baseURL || '';
+  }
+
+  // Council of Minds API
+  async submitDeliberation(request: DeliberationRequest): Promise<DeliberationResponse> {
+    const response: AxiosResponse<DeliberationResponse> = await this.client.post('/council/deliberate', request);
+    return response.data;
+  }
+
+  async getDeliberation(deliberationId: string): Promise<DeliberationResponse> {
+    const response: AxiosResponse<DeliberationResponse> = await this.client.get(`/council/deliberations/${deliberationId}`);
+    return response.data;
+  }
+
+  async getPersonas(): Promise<PersonaInfo[]> {
+    const response: AxiosResponse<PersonaInfo[]> = await this.client.get('/council/personas');
+    return response.data;
+  }
+
+  async getPersona(personaId: string): Promise<PersonaInfo> {
+    const response: AxiosResponse<PersonaInfo> = await this.client.get(`/council/personas/${personaId}`);
+    return response.data;
+  }
+
+  async getCouncilPerformance(): Promise<CouncilPerformance> {
+    const response: AxiosResponse<CouncilPerformance> = await this.client.get('/council/performance');
+    return response.data;
+  }
+
+  async getDeliberationHistory(limit?: number): Promise<DeliberationHistory> {
+    const response: AxiosResponse<DeliberationHistory> = await this.client.get('/council/history', {
+      params: { limit },
+    });
+    return response.data;
+  }
+
+  async getCouncilHealth(): Promise<CouncilHealthCheck> {
+    const response: AxiosResponse<CouncilHealthCheck> = await this.client.get('/council/health/detailed');
+    return response.data;
+  }
+
+  async resetCouncil(): Promise<{ status: string; message: string; timestamp: string }> {
+    const response = await this.client.post('/council/reset');
+    return response.data;
   }
 }
 

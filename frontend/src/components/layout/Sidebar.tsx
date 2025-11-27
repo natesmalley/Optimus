@@ -9,7 +9,8 @@ import {
   Zap,
   Activity,
   Database,
-  Code
+  Code,
+  Users
 } from 'lucide-react';
 import { useDashboardStore, useRuntimeStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,12 @@ const navigationItems = [
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    id: 'deliberation',
+    label: 'Council of Minds',
+    href: '/deliberation',
+    icon: Users,
   },
   {
     id: 'monitor',

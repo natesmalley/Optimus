@@ -11,17 +11,18 @@ from typing import Dict, Any, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 # Import system components
-from src.council import (
-    Blackboard, BlackboardEntry, EntryType,
-    Persona, PersonaResponse, PersonaPriority,
-    ConsensusEngine, ConsensusMethod,
-    Orchestrator,
-    StrategistPersona, PragmatistPersona, InnovatorPersona,
-    GuardianPersona, AnalystPersona
-)
+from src.council.blackboard import Blackboard, BlackboardEntry, EntryType
+from src.council.persona import Persona, PersonaResponse, PersonaPriority
+from src.council.consensus import ConsensusEngine, ConsensusMethod
+from src.council.orchestrator import Orchestrator, DeliberationRequest
+from src.council.personas.strategist import StrategistPersona
+from src.council.personas.pragmatist import PragmatistPersona
+from src.council.personas.innovator import InnovatorPersona
+from src.council.personas.guardian import GuardianPersona
+from src.council.personas.analyst import AnalystPersona
 from src.council.personas import ALL_PERSONAS, CORE_PERSONAS
-from src.council.tool_integration import ToolPermission, ToolExecutor
-from src.database.memory_optimized import OptimizedMemoryManager
+from src.council.tool_integration import ToolPermission, PersonaToolIntegration
+from src.database.memory_optimized import OptimizedMemorySystem
 from src.database.knowledge_graph_optimized import OptimizedKnowledgeGraph
 
 
@@ -272,7 +273,7 @@ async def temp_database():
 async def memory_manager(temp_database):
     """Create memory manager for testing"""
     with patch('src.database.memory_optimized.DATABASE_CONFIG', temp_database):
-        manager = OptimizedMemoryManager()
+        manager = OptimizedMemorySystem()
         await manager.initialize()
         yield manager
         await manager.cleanup()
@@ -295,7 +296,7 @@ async def knowledge_graph(temp_database):
 @pytest.fixture
 def mock_tool_executor():
     """Create mock tool executor"""
-    executor = MagicMock(spec=ToolExecutor)
+    executor = MagicMock(spec=PersonaToolIntegration)
     executor.execute_tool = AsyncMock()
     executor.check_permission = MagicMock(return_value=True)
     executor.get_rate_limit_status = MagicMock(return_value={"remaining": 100, "reset_time": 60})

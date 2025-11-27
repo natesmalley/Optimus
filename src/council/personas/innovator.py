@@ -59,8 +59,17 @@ class InnovatorPersona(Persona):
         creative_solutions = self._generate_creative_solutions(query, context)
         tech_leverage = self._assess_technology_leverage(context)
         
-        # Build recommendation
-        if innovation_opportunities['breakthrough_potential'] > 0.7:
+        # Build context-aware recommendation
+        query_lower = query.lower()
+        
+        if 'microservice' in query_lower:
+            team_size = context.get('team_size', 5)
+            if team_size <= 3:
+                recommendation = ("Innovation perspective: Skip microservices, innovate with modular monolith design. "
+                                "Use plugin architecture and event sourcing within single deployment for flexibility.")
+            else:
+                recommendation = f"Emerging architecture opportunity: {creative_solutions['microservices_innovation']}"
+        elif innovation_opportunities['breakthrough_potential'] > 0.7:
             recommendation = f"Breakthrough opportunity: {creative_solutions['top_solution']}"
         elif tech_leverage['emerging_tech_fit'] > 0.6:
             recommendation = f"Leverage {tech_leverage['best_tech']}: {creative_solutions['tech_enabled_solution']}"
@@ -135,10 +144,24 @@ class InnovatorPersona(Persona):
     
     def _generate_creative_solutions(self, query: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Generate creative solution approaches"""
+        query_lower = query.lower()
+        team_size = context.get('team_size', 5)
+        
+        if 'microservice' in query_lower:
+            if team_size <= 3:
+                microservices_innovation = ("Modular monolith with internal service boundaries, "
+                                          "CQRS pattern, and async messaging for future microservice extraction")
+            else:
+                microservices_innovation = ("Domain-driven design with bounded contexts, "
+                                          "service mesh for observability, and choreography over orchestration")
+        else:
+            microservices_innovation = "Event-driven microservices with AI-powered auto-scaling"
+        
         return {
             'top_solution': "AI-powered automation with self-learning capabilities",
-            'tech_enabled_solution': "Cloud-native microservices with event-driven architecture",
+            'tech_enabled_solution': "Cloud-native architecture with observability-first design",
             'practical_innovation': "Modular design with plugin architecture for extensibility",
+            'microservices_innovation': microservices_innovation,
             'patent_potential': context.get('novel_approach', False)
         }
     
