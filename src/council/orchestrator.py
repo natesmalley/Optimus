@@ -98,8 +98,8 @@ class Orchestrator:
         # Tool integration
         self.tool_integration: Optional[PersonaToolIntegration] = None
         
-        # Memory and Knowledge Graph integration - initialize as None for now
-        self.memory_system = None  # Will be connected when integration is fixed
+        # Memory and Knowledge Graph integration
+        self.memory_system = None  # Will be initialized in initialize()
         self.knowledge_graph = None  # Will be connected when integration is fixed
         
     async def initialize(self):
@@ -153,6 +153,15 @@ class Orchestrator:
         except Exception as e:
             logger.warning(f"Tool integration failed to initialize: {e}")
             # Continue without tools - not critical for basic operation
+
+        # Initialize memory system
+        try:
+            from .memory_system import get_memory_system
+            self.memory_system = await get_memory_system()
+            logger.info("Memory system initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize memory system: {e}")
+            # Continue without memory system - not critical for basic operation
         
         self.is_initialized = True
         logger.info(f"Council initialized with {len(self.personas)} personas")
@@ -546,35 +555,47 @@ class Orchestrator:
         enhanced_context = request.context.copy()
         enhanced_context['remembered_experiences'] = []
         
-        # Recall memories for each persona
-        for persona in personas:
-            try:
-                relevant_memories = await self.memory_system.recall(
-                    persona_id=persona.persona_id,
-                    query=request.query,
-                    context=request.context,
-                    limit=3  # Top 3 most relevant memories
-                )
-                
-                if relevant_memories:
-                    persona_memories = []
-                    for memory in relevant_memories:
-                        persona_memories.append({
-                            'content': memory.content,
-                            'importance': memory.importance,
-                            'timestamp': memory.timestamp.isoformat(),
-                            'emotional_valence': memory.emotional_valence
-                        })
-                    
-                    enhanced_context['remembered_experiences'].append({
-                        'persona_id': persona.persona_id,
-                        'memories': persona_memories
+        if not self.memory_system:
+            return enhanced_context
+        
+        try:
+            # Import the memory query class
+            from .memory_system import MemoryQuery
+            
+            # Recall memories using the new system
+            memory_query = MemoryQuery(
+                query_text=request.query,
+                context=request.context,
+                topic=request.topic,
+                limit=5,
+                min_relevance=0.3,
+                include_context=True
+            )
+            
+            recall_result = await self.memory_system.recall_memories(memory_query)
+            
+            if recall_result.memories:
+                # Group memories by topic/similarity for context
+                memories_context = []
+                for memory, relevance in zip(recall_result.memories, recall_result.relevance_scores):
+                    memories_context.append({
+                        'query': memory.query,
+                        'decision': memory.consensus_result.get('decision', ''),
+                        'confidence': memory.consensus_confidence,
+                        'topic': memory.topic,
+                        'relevance': relevance,
+                        'timestamp': memory.created_at.isoformat(),
+                        'importance': memory.importance_score
                     })
-                    
-                    logger.debug(f"Enhanced context with {len(relevant_memories)} memories for {persona.name}")
-                    
-            except Exception as e:
-                logger.warning(f"Failed to recall memories for {persona.name}: {e}")
+                
+                enhanced_context['remembered_experiences'] = memories_context
+                enhanced_context['memory_context_available'] = True
+                
+                logger.debug(f"Enhanced context with {len(memories_context)} relevant memories")
+                
+        except Exception as e:
+            logger.warning(f"Failed to recall memories for context enhancement: {e}")
+            enhanced_context['memory_context_available'] = False
         
         return enhanced_context
     
@@ -596,45 +617,19 @@ class Orchestrator:
     
     async def _store_deliberation_memories(self, result: DeliberationResult):
         """
-        Store deliberation results as memories for each participating persona
+        Store deliberation results as memories using the new memory system
         """
-        for response in result.persona_responses:
-            try:
-                # Create memory content based on the deliberation
-                memory_content = f"Deliberated on: {result.request.query}. " \
-                               f"My recommendation: {response.recommendation}. " \
-                               f"Final consensus: {result.consensus.decision}. " \
-                               f"My confidence was {response.confidence:.0%}."
-                
-                # Determine emotional valence based on confidence and agreement
-                if response.persona_id in result.consensus.supporting_personas:
-                    emotional_valence = 0.3 + (response.confidence * 0.7)  # Positive if supported consensus
-                elif response.persona_id in result.consensus.dissenting_personas:
-                    emotional_valence = -0.2 - (response.confidence * 0.3)  # Negative if dissented
-                else:
-                    emotional_valence = 0.0  # Neutral
-                
-                # Store memory
-                await self.memory_system.store_memory(
-                    persona_id=response.persona_id,
-                    content=memory_content,
-                    context={
-                        'deliberation_id': result.blackboard_topic,
-                        'query': result.request.query,
-                        'decision_type': 'deliberation',
-                        'consensus_method': result.consensus.method_used.value,
-                        'agreement_level': result.consensus.agreement_level,
-                        'participants': [r.persona_id for r in result.persona_responses]
-                    },
-                    importance=min(1.0, response.confidence * 1.2),  # Boost importance for confident responses
-                    emotional_valence=emotional_valence,
-                    tags={'deliberation', 'decision', result.request.query.split()[0].lower()}
-                )
-                
-                logger.debug(f"Stored memory for {response.persona_id}: confidence={response.confidence:.2f}, valence={emotional_valence:.2f}")
-                
-            except Exception as e:
-                logger.error(f"Failed to store memory for persona {response.persona_id}: {e}")
+        if not self.memory_system:
+            logger.warning("Memory system not available - skipping memory storage")
+            return
+            
+        try:
+            # Store the complete deliberation in the memory system
+            await self.memory_system.store_deliberation(result.request, result)
+            logger.debug(f"Stored deliberation memory for topic: {result.blackboard_topic}")
+            
+        except Exception as e:
+            logger.error(f"Failed to store deliberation memories: {e}", exc_info=True)
     
     async def _update_knowledge_graph(self, result: DeliberationResult):
         """

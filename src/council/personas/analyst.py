@@ -116,8 +116,18 @@ class AnalystPersona(Persona):
         )
     
     def calculate_confidence(self, query: str, context: Dict[str, Any]) -> float:
-        """Calculate confidence based on data availability and quality"""
+        """Calculate confidence based on data availability and analytical relevance"""
         confidence = 0.5  # Start neutral
+        
+        # Check if query has analytical keywords that increase confidence
+        query_lower = query.lower()
+        analytical_keywords = ['data', 'metrics', 'performance', 'analyze', 'measure', 'statistics', 'numbers', 'evidence']
+        if any(keyword in query_lower for keyword in analytical_keywords):
+            confidence += 0.15
+        
+        # Architecture decisions often benefit from analytical perspective
+        if any(term in query_lower for term in ['architecture', 'microservice', 'database', 'scale', 'optimize']):
+            confidence += 0.1
         
         # Increase for data availability
         if context.get('metrics_available', 0) > 10:
@@ -127,13 +137,18 @@ class AnalystPersona(Persona):
         if context.get('data_quality', 0.5) > 0.7:
             confidence += 0.15
         
-        # Decrease for data issues
-        if context.get('data_gaps'):
+        # Increase for common business context indicators
+        if context.get('team_size') or context.get('budget') or context.get('timeline'):
+            confidence += 0.1  # Basic business metrics available
+        
+        # Decrease for data issues (only if explicitly mentioned)
+        if context.get('data_gaps') is True:
             confidence -= 0.15
-        if context.get('metrics_available', 0) < 3:
+        # Only penalize if explicitly stated as having very few metrics
+        if context.get('metrics_available') is not None and context.get('metrics_available') < 3:
             confidence -= 0.2
             
-        return max(0.2, min(0.9, confidence))
+        return max(0.3, min(0.9, confidence))
     
     def _analyze_metrics(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze available metrics"""

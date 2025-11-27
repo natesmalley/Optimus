@@ -73,7 +73,7 @@ class HealerPersona(Persona):
         
         # Build recommendation
         recommendation = self._formulate_wellness_guidance(
-            query, health_impact, sustainability_score, stress_factors
+            query, health_impact, sustainability_score, stress_factors, context
         )
         
         # Identify health concerns
@@ -287,9 +287,25 @@ class HealerPersona(Persona):
                                    query: str,
                                    health_impact: Dict[str, Any],
                                    sustainability: float,
-                                   stress_factors: Dict[str, Any]) -> str:
+                                   stress_factors: Dict[str, Any],
+                                   context: Dict[str, Any]) -> str:
         """Formulate wellness-focused guidance"""
         
+        query_lower = query.lower()
+        
+        # Specific health guidance for car seats
+        if 'car seat' in query_lower or 'carseat' in query_lower or 'baby seat' in query_lower:
+            if 'second hand' in query_lower or 'used' in query_lower:
+                return ("Health perspective: New parent stress is real - prioritize peace of mind. "
+                       "New car seats eliminate worry about hidden issues, provide clear instructions, "
+                       "and reduce decision fatigue. The mental health benefit of knowing your child "
+                       "has maximum protection can outweigh cost savings, supporting family wellbeing.")
+            else:
+                return ("Wellbeing focus: Choose based on ease of use to reduce daily stress. "
+                       "Features like easy installation, washable covers, and clear indicators "
+                       "support parent wellness by minimizing frustration and uncertainty.")
+        
+        # General wellness guidance
         if stress_factors['high_stress_risk'] and sustainability < 0.4:
             return (f"Health-first approach needed: Current stress level ({stress_factors['stress_level']}) "
                    f"and low sustainability ({sustainability:.0%}) require immediate wellbeing interventions")

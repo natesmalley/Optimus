@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimus Council of Minds</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto p-6">
+        <h1 class="text-4xl font-bold mb-8 text-center bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+            🧠 Optimus Council of Minds
+        </h1>
+        
+        <div class="max-w-4xl mx-auto">
+            <!-- Deliberation Form -->
+            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-semibold mb-4">Ask the Council</h2>
+                <textarea 
+                    id="query" 
+                    class="w-full p-3 bg-gray-700 rounded text-white" 
+                    rows="3" 
+                    placeholder="Enter your question... (e.g., 'Should we use microservices?')"></textarea>
+                
+                <div class="mt-4 grid grid-cols-3 gap-4">
+                    <input type="number" id="team_size" placeholder="Team Size" value="5" class="p-2 bg-gray-700 rounded">
+                    <input type="number" id="budget" placeholder="Budget" value="50000" class="p-2 bg-gray-700 rounded">
+                    <input type="text" id="timeline" placeholder="Timeline" value="3 months" class="p-2 bg-gray-700 rounded">
+                </div>
+                
+                <button onclick="submitDeliberation()" class="mt-4 bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded font-semibold">
+                    Submit to Council
+                </button>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="loading" class="hidden bg-gray-800 rounded-lg p-6 mb-6 text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
+                <p class="mt-4">Council is deliberating...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="hidden">
+                <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                    <h3 class="text-xl font-semibold mb-4">Consensus</h3>
+                    <div id="consensus" class="bg-gray-700 p-4 rounded"></div>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold mb-4">Individual Personas</h3>
+                    <div id="personas" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- Quick Tests -->
+            <div class="bg-gray-800 rounded-lg p-6 mt-6">
+                <h3 class="text-xl font-semibold mb-4">Quick Test Examples</h3>
+                <div class="space-y-2">
+                    <button onclick="testExample('technical')" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-sm">
+                        Test: Microservices Decision
+                    </button>
+                    <button onclick="testExample('life')" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm ml-2">
+                        Test: Career Decision
+                    </button>
+                    <button onclick="testHealth()" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded text-sm ml-2">
+                        Check System Health
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8005/api/v1';
+
+        async function submitDeliberation() {
+            const query = document.getElementById('query').value;
+            const team_size = parseInt(document.getElementById('team_size').value);
+            const budget = parseInt(document.getElementById('budget').value);
+            const timeline = document.getElementById('timeline').value;
+
+            if (!query) {
+                alert('Please enter a question');
+                return;
+            }
+
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_URL}/council/deliberate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query,
+                        context: { team_size, budget, timeline }
+                    })
+                });
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        function displayResults(data) {
+            document.getElementById('results').classList.remove('hidden');
+
+            // Display consensus - handle both API response formats
+            const consensus = data.consensus_details || data.consensus;
+            const decision = consensus?.decision || data.decision || 'No decision available';
+            const confidence = Math.round((consensus?.confidence || data.confidence || 0) * 100);
+            
+            document.getElementById('consensus').innerHTML = `
+                <p class="text-lg font-semibold">${decision}</p>
+                <div class="mt-2">
+                    <span class="text-sm text-gray-400">Confidence: </span>
+                    <span class="text-2xl font-bold ${confidence > 70 ? 'text-green-400' : confidence > 50 ? 'text-yellow-400' : 'text-red-400'}">
+                        ${confidence}%
+                    </span>
+                </div>
+                <div class="mt-2 text-sm text-gray-400">
+                    Agreement Level: ${Math.round((data.agreement_level || 0) * 100)}%
+                </div>
+            `;
+
+            // Display personas if available
+            if (data.persona_responses && data.persona_responses.length > 0) {
+                const personasHtml = data.persona_responses.map(p => {
+                    const confidencePercent = Math.round((p.confidence || 0) * 100);
+                    const concerns = p.concerns && p.concerns.length > 0 ? 
+                        `<div class="mt-2 text-xs text-orange-400">⚠️ ${p.concerns.join(', ')}</div>` : '';
+                    const opportunities = p.opportunities && p.opportunities.length > 0 ? 
+                        `<div class="mt-1 text-xs text-green-400">✓ ${p.opportunities.join(', ')}</div>` : '';
+                    const reasoning = p.reasoning ? 
+                        `<div class="mt-2 text-xs text-gray-400 italic">${p.reasoning}</div>` : '';
+                    
+                    return `
+                        <div class="bg-gray-700 p-3 rounded">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="font-semibold">${p.persona_name || p.persona_id}</span>
+                                <span class="text-sm ${confidencePercent > 70 ? 'text-green-400' : confidencePercent > 50 ? 'text-yellow-400' : 'text-red-400'}">
+                                    ${confidencePercent}%
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-300">${p.recommendation}</p>
+                            ${reasoning}
+                            ${concerns}
+                            ${opportunities}
+                        </div>
+                    `;
+                }).join('');
+
+                document.getElementById('personas').innerHTML = personasHtml;
+            } else {
+                document.getElementById('personas').innerHTML = `
+                    <p class="text-gray-400">Individual persona responses not available</p>
+                `;
+            }
+        }
+
+        function testExample(type) {
+            if (type === 'technical') {
+                document.getElementById('query').value = 'Should we migrate to microservices for our e-commerce platform?';
+                document.getElementById('team_size').value = 5;
+                document.getElementById('budget').value = 100000;
+                document.getElementById('timeline').value = '6 months';
+            } else {
+                document.getElementById('query').value = 'Should I take a job with 30% more pay but requires relocation?';
+                document.getElementById('team_size').value = 1;
+                document.getElementById('budget').value = 0;
+                document.getElementById('timeline').value = 'immediate';
+            }
+            submitDeliberation();
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_URL.replace('/api/v1', '')}/health`);
+                const data = await response.json();
+                alert(`System Status: ${data.status}\nDatabase: ${data.database || 'Connected'}`);
+            } catch (error) {
+                alert('Error checking health: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

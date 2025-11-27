@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import get_settings, db_manager, redis_manager, logger
-from .api import projects, runtime, metrics, council
+from .api import projects, runtime, metrics, council, memory, knowledge_graph, scanner, monitor, dashboard, websocket
 from .services import ProjectScanner, RuntimeMonitor
 
 
@@ -84,23 +84,23 @@ async def lifespan(app: FastAPI):
         await redis_manager.initialize()
         logger.info("Redis initialized")
         
-        # Start background monitoring
-        global background_monitor_task
-        background_monitor_task = asyncio.create_task(start_background_monitoring())
-        logger.info("Background monitoring started")
+        # Start background monitoring (disabled for testing)
+        # global background_monitor_task
+        # background_monitor_task = asyncio.create_task(start_background_monitoring())
+        logger.info("Background monitoring disabled for testing")
         
         yield
         
     finally:
         logger.info("Shutting down Optimus backend...")
         
-        # Cancel background tasks
-        if background_monitor_task and not background_monitor_task.done():
-            background_monitor_task.cancel()
-            try:
-                await background_monitor_task
-            except asyncio.CancelledError:
-                pass
+        # Cancel background tasks (disabled for testing)
+        # if background_monitor_task and not background_monitor_task.done():
+        #     background_monitor_task.cancel()
+        #     try:
+        #         await background_monitor_task
+        #     except asyncio.CancelledError:
+        #         pass
         
         # Close connections
         await db_manager.close()
@@ -146,9 +146,9 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=["*"],  # Allow all origins for testing
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -306,9 +306,15 @@ async def root():
         "endpoints": {
             "health": "/health",
             "projects": f"{settings.api_prefix}/projects",
-            "runtime": f"{settings.api_prefix}/runtime",
+            "runtime": f"{settings.api_prefix}/runtime", 
             "metrics": f"{settings.api_prefix}/metrics",
             "council": f"{settings.api_prefix}/council",
+            "memory": f"{settings.api_prefix}/memory",
+            "knowledge_graph": f"{settings.api_prefix}/graph",
+            "scanner": f"{settings.api_prefix}/scanner",
+            "monitor": f"{settings.api_prefix}/monitor",
+            "dashboard": f"{settings.api_prefix}/dashboard",
+            "websocket": "/ws"
         }
     }
 
@@ -336,6 +342,44 @@ app.include_router(
     council.router,
     prefix=f"{settings.api_prefix}/council",
     tags=["council"]
+)
+
+# Include new API routers
+app.include_router(
+    memory.router,
+    prefix=f"{settings.api_prefix}/memory",
+    tags=["memory"]
+)
+
+app.include_router(
+    knowledge_graph.router,
+    prefix=f"{settings.api_prefix}/graph",
+    tags=["knowledge_graph"]
+)
+
+app.include_router(
+    scanner.router,
+    prefix=f"{settings.api_prefix}/scanner",
+    tags=["scanner"]
+)
+
+app.include_router(
+    monitor.router,
+    prefix=f"{settings.api_prefix}/monitor",
+    tags=["monitor"]
+)
+
+app.include_router(
+    dashboard.router,
+    prefix=f"{settings.api_prefix}/dashboard",
+    tags=["dashboard"]
+)
+
+# Include WebSocket routes
+app.include_router(
+    websocket.router,
+    prefix="/ws",
+    tags=["websocket"]
 )
 
 # Set websocket manager for council API
@@ -399,7 +443,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "src.main:app",
         host="0.0.0.0",
-        port=8002,
+        port=8005,
         reload=settings.debug,
         log_level=settings.log_level.lower(),
         access_log=True,

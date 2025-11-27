@@ -52,6 +52,7 @@ class DeliberationResponseModel(BaseModel):
     dissenting_personas: List[str]
     alternative_views: Dict[str, str]
     statistics: Dict[str, Any]
+    persona_responses: Optional[List[Dict[str, Any]]] = None
 
 class PersonaInfoModel(BaseModel):
     """Information about a persona"""
@@ -197,6 +198,20 @@ async def create_deliberation(
         )
         
         # Convert to response model
+        persona_details = []
+        for persona_response in result.persona_responses:
+            persona_details.append({
+                "persona_id": persona_response.persona_id,
+                "persona_name": persona_response.persona_name,
+                "recommendation": persona_response.recommendation,
+                "reasoning": persona_response.reasoning,
+                "confidence": persona_response.confidence,
+                "priority": persona_response.priority.value if hasattr(persona_response.priority, 'value') else str(persona_response.priority),
+                "concerns": persona_response.concerns,
+                "opportunities": persona_response.opportunities,
+                "data_points": persona_response.data_points
+            })
+        
         response = DeliberationResponseModel(
             id=deliberation_id,
             query=result.request.query,
@@ -210,7 +225,8 @@ async def create_deliberation(
             supporting_personas=result.consensus.supporting_personas,
             dissenting_personas=result.consensus.dissenting_personas,
             alternative_views=result.consensus.alternative_views,
-            statistics=result.statistics
+            statistics=result.statistics,
+            persona_responses=persona_details
         )
         
         logger.info(f"Deliberation completed: {deliberation_id} - {response.confidence:.1%} confidence")

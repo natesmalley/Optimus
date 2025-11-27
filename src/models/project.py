@@ -37,7 +37,11 @@ class Project(Base, TimestampMixin):
     
     # Relationships
     runtime_statuses = relationship("RuntimeStatus", back_populates="project", cascade="all, delete-orphan")
+    process_snapshots = relationship("ProcessSnapshot", back_populates="project", cascade="all, delete-orphan")
+    performance_alerts = relationship("PerformanceAlert", back_populates="project", cascade="all, delete-orphan")
+    log_entries = relationship("LogEntry", back_populates="project", cascade="all, delete-orphan")
     analysis_results = relationship("AnalysisResult", back_populates="project", cascade="all, delete-orphan")
+    scan_results = relationship("ScanResult", back_populates="project", cascade="all, delete-orphan")
     monetization_opportunities = relationship("MonetizationOpportunity", back_populates="project", cascade="all, delete-orphan")
     error_patterns = relationship("ErrorPattern", back_populates="project", cascade="all, delete-orphan")
     issues = relationship("Issue", back_populates="project", cascade="all, delete-orphan")

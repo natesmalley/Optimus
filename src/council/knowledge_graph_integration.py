@@ -278,6 +278,192 @@ class KnowledgeGraphAdapter:
             plt.title("Optimus Knowledge Graph")
             plt.savefig(output_file, dpi=150, bbox_inches='tight')
             plt.close()
+    
+    async def add_performance_alert(self, alert_type: str, severity: str, 
+                                  project_id: Optional[str] = None, 
+                                  details: Dict[str, Any] = None,
+                                  timestamp: datetime = None) -> str:
+        \"\"\"Add a performance alert to the knowledge graph.\"\"\"
+        await self._ensure_initialized()
+        
+        # Create performance alert node
+        alert_id = f"alert_{alert_type}_{timestamp.strftime('%Y%m%d_%H%M%S')}" if timestamp else f"alert_{alert_type}"
+        
+        alert_properties = {
+            "alert_type": alert_type,
+            "severity": severity,
+            "timestamp": timestamp.isoformat() if timestamp else datetime.now().isoformat(),
+            "details": details or {}
+        }
+        
+        if project_id:
+            alert_properties["project_id"] = project_id
+        
+        # Add to optimized graph
+        await self.optimized_graph.add_node(
+            node_id=alert_id,
+            node_type="performance_alert",
+            properties=alert_properties
+        )
+        
+        # Create relationships if project exists
+        if project_id:
+            # Link alert to project
+            await self.optimized_graph.add_edge(
+                from_node=project_id,
+                to_node=alert_id,
+                edge_type="has_alert",
+                properties={"alert_severity": severity, "alert_type": alert_type}
+            )
+            
+            # Link to performance patterns
+            await self._link_to_performance_patterns(alert_id, alert_type, severity, project_id)
+        
+        return alert_id
+    
+    async def add_runtime_metrics(self, project_id: str, metrics: Dict[str, Any],
+                                timestamp: datetime = None) -> str:
+        \"\"\"Add runtime metrics to the knowledge graph.\"\"\"
+        await self._ensure_initialized()
+        
+        timestamp = timestamp or datetime.now()
+        metrics_id = f"metrics_{project_id}_{timestamp.strftime('%Y%m%d_%H%M%S')}"
+        
+        metrics_properties = {
+            "project_id": project_id,
+            "timestamp": timestamp.isoformat(),
+            **metrics
+        }
+        
+        # Add metrics node
+        await self.optimized_graph.add_node(
+            node_id=metrics_id,
+            node_type="runtime_metrics",
+            properties=metrics_properties
+        )
+        
+        # Link to project
+        await self.optimized_graph.add_edge(
+            from_node=project_id,
+            to_node=metrics_id,
+            edge_type="has_metrics",
+            properties={"timestamp": timestamp.isoformat()}
+        )
+        
+        return metrics_id
+    
+    async def add_process_insight(self, process_name: str, project_id: str,
+                                insights: Dict[str, Any]) -> str:
+        \"\"\"Add process performance insights.\"\"\"
+        await self._ensure_initialized()
+        
+        insight_id = f"insight_{process_name}_{project_id}"
+        
+        insight_properties = {
+            "process_name": process_name,
+            "project_id": project_id,
+            "insights": insights,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        # Add or update insight node
+        await self.optimized_graph.add_node(
+            node_id=insight_id,
+            node_type="process_insight",
+            properties=insight_properties
+        )
+        
+        # Link to project and process
+        await self.optimized_graph.add_edge(
+            from_node=project_id,
+            to_node=insight_id,
+            edge_type="has_process_insight",
+            properties={"process_name": process_name}
+        )
+        
+        return insight_id
+    
+    async def get_performance_history(self, project_id: str, 
+                                    hours: int = 24) -> List[Dict[str, Any]]:
+        \"\"\"Get performance history for a project.\"\"\"
+        await self._ensure_initialized()
+        
+        # Query metrics nodes linked to project
+        try:
+            query_result = await self.optimized_graph.query_by_type(
+                "runtime_metrics",
+                filters={"project_id": project_id}
+            )
+            
+            # Filter by time range and sort
+            from_time = datetime.now().timestamp() - (hours * 3600)
+            
+            history = []
+            for node in query_result:
+                timestamp_str = node.properties.get("timestamp", "")
+                try:
+                    timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                    if timestamp.timestamp() >= from_time:
+                        history.append({
+                            "timestamp": timestamp_str,
+                            **{k: v for k, v in node.properties.items() if k not in ["project_id", "timestamp"]}
+                        })
+                except (ValueError, AttributeError):
+                    continue
+            
+            return sorted(history, key=lambda x: x["timestamp"])
+        except Exception:
+            return []
+    
+    async def get_similar_performance_patterns(self, alert_type: str, 
+                                             project_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        \"\"\"Find similar performance patterns across projects.\"\"\"
+        await self._ensure_initialized()
+        
+        try:
+            # Query for similar alerts
+            similar_alerts = await self.optimized_graph.query_by_type(
+                "performance_alert",
+                filters={"alert_type": alert_type}
+            )
+            
+            patterns = []
+            for alert in similar_alerts:
+                if project_id and alert.properties.get("project_id") == project_id:
+                    continue  # Skip same project
+                
+                patterns.append({
+                    "alert_id": alert.node_id,
+                    "project_id": alert.properties.get("project_id"),
+                    "severity": alert.properties.get("severity"),
+                    "timestamp": alert.properties.get("timestamp"),
+                    "details": alert.properties.get("details", {})
+                })
+            
+            return patterns
+        except Exception:
+            return []
+    
+    async def _link_to_performance_patterns(self, alert_id: str, alert_type: str, 
+                                          severity: str, project_id: str):
+        \"\"\"Link alert to existing performance patterns.\"\"\"
+        try:
+            # Find similar patterns
+            similar_patterns = await self.get_similar_performance_patterns(alert_type, project_id)
+            
+            # Create pattern relationships
+            for pattern in similar_patterns[:5]:  # Limit to 5 most similar
+                await self.optimized_graph.add_edge(
+                    from_node=alert_id,
+                    to_node=pattern["alert_id"],
+                    edge_type="similar_pattern",
+                    properties={
+                        "similarity_type": "alert_type_match",
+                        "confidence": 0.8 if pattern["severity"] == severity else 0.6
+                    }
+                )
+        except Exception:
+            pass  # Silently handle failures in pattern linking
 
 
 # Create a global instance that can be used as a drop-in replacement

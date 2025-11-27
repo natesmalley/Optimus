@@ -119,25 +119,36 @@ class StrategistPersona(Persona):
         """
         confidence = 0.5  # Base confidence
         
+        # Most business/technical decisions have strategic implications
+        query_lower = query.lower()
+        decision_keywords = ['should', 'implement', 'architecture', 'approach', 'decision', 'choose']
+        if any(keyword in query_lower for keyword in decision_keywords):
+            confidence += 0.1
+        
         # Increase confidence if we have good historical data
         if context.get('historical_data'):
             confidence += 0.15
         
-        # Increase if we have clear goals defined
+        # Increase if we have clear goals defined or basic business context
         if context.get('project_goals') or context.get('business_objectives'):
             confidence += 0.15
+        if context.get('team_size') or context.get('timeline'):
+            confidence += 0.1  # Basic strategic context for planning
         
         # Increase if this is in our domain
-        query_lower = query.lower()
-        strategic_keywords = ['long-term', 'strategy', 'roadmap', 'vision', 'future', 'scale', 'growth']
+        strategic_keywords = ['long-term', 'strategy', 'roadmap', 'vision', 'future', 'scale', 'growth', 'microservice']
         if any(keyword in query_lower for keyword in strategic_keywords):
             confidence += 0.2
+        
+        # Architecture decisions are inherently strategic
+        if 'architecture' in query_lower:
+            confidence += 0.15
         
         # Decrease if situation is highly volatile
         if context.get('high_uncertainty', False):
             confidence -= 0.15
         
-        return max(0.1, min(0.95, confidence))
+        return max(0.3, min(0.95, confidence))
     
     def _assess_strategic_factors(self, query: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Assess key strategic factors"""
