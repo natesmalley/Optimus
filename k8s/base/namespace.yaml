@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: optimus
+  labels:
+    app.kubernetes.io/name: optimus
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: namespace
+    environment: base

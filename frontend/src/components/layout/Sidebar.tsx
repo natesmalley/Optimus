@@ -10,7 +10,11 @@ import {
   Activity,
   Database,
   Code,
-  Users
+  Users,
+  Play,
+  Rocket,
+  Cpu,
+  Archive
 } from 'lucide-react';
 import { useDashboardStore, useRuntimeStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -21,6 +25,30 @@ const navigationItems = [
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
+  },
+  {
+    id: 'orchestration',
+    label: 'Orchestration',
+    href: '/orchestration',
+    icon: Play,
+  },
+  {
+    id: 'deployment',
+    label: 'Deployments',
+    href: '/deployment',
+    icon: Rocket,
+  },
+  {
+    id: 'resources',
+    label: 'Resources',
+    href: '/resources',
+    icon: Cpu,
+  },
+  {
+    id: 'backup',
+    label: 'Backups',
+    href: '/backup',
+    icon: Archive,
   },
   {
     id: 'deliberation',

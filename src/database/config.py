@@ -23,7 +23,7 @@ class DatabaseConfig:
     """Database configuration settings"""
     
     # PostgreSQL settings
-    postgres_url: str = "postgresql+asyncpg://postgres:password@localhost:5432/optimus_db"
+    postgres_url: str = "postgresql+asyncpg://nathanial.smalley@localhost:5432/optimus_db"
     postgres_pool_size: int = 20
     postgres_max_overflow: int = 30
     postgres_pool_timeout: int = 30

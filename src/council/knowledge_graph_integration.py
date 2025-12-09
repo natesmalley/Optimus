@@ -283,7 +283,7 @@ class KnowledgeGraphAdapter:
                                   project_id: Optional[str] = None, 
                                   details: Dict[str, Any] = None,
                                   timestamp: datetime = None) -> str:
-        \"\"\"Add a performance alert to the knowledge graph.\"\"\"
+        """Add a performance alert to the knowledge graph."""
         await self._ensure_initialized()
         
         # Create performance alert node
@@ -323,7 +323,7 @@ class KnowledgeGraphAdapter:
     
     async def add_runtime_metrics(self, project_id: str, metrics: Dict[str, Any],
                                 timestamp: datetime = None) -> str:
-        \"\"\"Add runtime metrics to the knowledge graph.\"\"\"
+        """Add runtime metrics to the knowledge graph."""
         await self._ensure_initialized()
         
         timestamp = timestamp or datetime.now()
@@ -354,7 +354,7 @@ class KnowledgeGraphAdapter:
     
     async def add_process_insight(self, process_name: str, project_id: str,
                                 insights: Dict[str, Any]) -> str:
-        \"\"\"Add process performance insights.\"\"\"
+        """Add process performance insights."""
         await self._ensure_initialized()
         
         insight_id = f"insight_{process_name}_{project_id}"
@@ -385,7 +385,7 @@ class KnowledgeGraphAdapter:
     
     async def get_performance_history(self, project_id: str, 
                                     hours: int = 24) -> List[Dict[str, Any]]:
-        \"\"\"Get performance history for a project.\"\"\"
+        """Get performance history for a project."""
         await self._ensure_initialized()
         
         # Query metrics nodes linked to project
@@ -417,7 +417,7 @@ class KnowledgeGraphAdapter:
     
     async def get_similar_performance_patterns(self, alert_type: str, 
                                              project_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        \"\"\"Find similar performance patterns across projects.\"\"\"
+        """Find similar performance patterns across projects."""
         await self._ensure_initialized()
         
         try:
@@ -446,7 +446,7 @@ class KnowledgeGraphAdapter:
     
     async def _link_to_performance_patterns(self, alert_id: str, alert_type: str, 
                                           severity: str, project_id: str):
-        \"\"\"Link alert to existing performance patterns.\"\"\"
+        """Link alert to existing performance patterns."""
         try:
             # Find similar patterns
             similar_patterns = await self.get_similar_performance_patterns(alert_type, project_id)
@@ -485,3 +485,6 @@ class KnowledgeGraph(KnowledgeGraphAdapter):
     Uses the optimized implementation while maintaining full compatibility.
     """
     pass
+
+# Alias for backwards compatibility  
+KnowledgeGraphIntegration = KnowledgeGraphAdapter

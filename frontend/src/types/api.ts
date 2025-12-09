@@ -324,3 +324,182 @@ export interface DeliberationProgress {
   total_personas: number;
   current_confidence?: number;
 }
+
+// Orchestration types
+export interface OrchestrationStatus {
+  project_id: string;
+  project_name: string;
+  is_running: boolean;
+  environment: 'dev' | 'staging' | 'prod';
+  start_time?: string;
+  pid?: number;
+  port?: number;
+  health_check_url?: string;
+  last_heartbeat?: string;
+  cpu_usage?: number;
+  memory_usage?: number;
+  status_details?: string;
+}
+
+export interface ResourceAllocation {
+  project_id: string;
+  cpu_limit?: number;
+  memory_limit?: number;
+  storage_limit?: number;
+  network_limit?: number;
+  current_usage: {
+    cpu_percent: number;
+    memory_mb: number;
+    storage_mb: number;
+    network_kb: number;
+  };
+  recommendations?: {
+    cpu?: number;
+    memory?: number;
+    storage?: number;
+  };
+}
+
+export interface EnvironmentConfig {
+  name: string;
+  variables: Record<string, string>;
+  secrets: Record<string, string>;
+  config_files?: Record<string, string>;
+  dependencies?: string[];
+  services?: string[];
+}
+
+export interface DeploymentStatus {
+  project_id: string;
+  deployment_id: string;
+  status: 'pending' | 'building' | 'deploying' | 'success' | 'failed' | 'rolling_back';
+  environment: string;
+  progress: number;
+  steps: DeploymentStep[];
+  start_time: string;
+  end_time?: string;
+  logs: string[];
+  rollback_available?: boolean;
+  version?: string;
+  commit_hash?: string;
+}
+
+export interface DeploymentStep {
+  name: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  start_time?: string;
+  end_time?: string;
+  duration?: number;
+  logs: string[];
+  error_message?: string;
+}
+
+export interface BackupInfo {
+  id: string;
+  project_id: string;
+  name: string;
+  type: 'manual' | 'scheduled' | 'pre_deployment';
+  size_mb: number;
+  created_at: string;
+  status: 'creating' | 'completed' | 'failed' | 'expired';
+  includes: string[];
+  excludes: string[];
+  compression: string;
+  retention_days: number;
+  can_restore: boolean;
+}
+
+export interface BackupSchedule {
+  id: string;
+  project_id: string;
+  name: string;
+  cron_expression: string;
+  enabled: boolean;
+  backup_type: string;
+  retention_days: number;
+  includes: string[];
+  excludes: string[];
+  last_run?: string;
+  next_run?: string;
+}
+
+// Request types for orchestration
+export interface LaunchProjectRequest {
+  environment?: string;
+  variables?: Record<string, string>;
+  debug?: boolean;
+  wait_for_health?: boolean;
+}
+
+export interface StopProjectRequest {
+  force?: boolean;
+  timeout?: number;
+}
+
+export interface SwitchEnvironmentRequest {
+  environment: string;
+  variables?: Record<string, string>;
+  restart_if_running?: boolean;
+}
+
+export interface ResourceAllocationRequest {
+  cpu_limit?: number;
+  memory_limit?: number;
+  storage_limit?: number;
+  priority?: 'low' | 'normal' | 'high';
+}
+
+export interface DeploymentRequest {
+  environment: string;
+  version?: string;
+  commit_hash?: string;
+  variables?: Record<string, string>;
+  strategy?: 'rolling' | 'blue_green' | 'recreate';
+  health_check_timeout?: number;
+}
+
+export interface BackupRequest {
+  name?: string;
+  includes?: string[];
+  excludes?: string[];
+  compression?: string;
+  retention_days?: number;
+}
+
+// Response types for orchestration
+export interface LaunchResponse {
+  success: boolean;
+  message: string;
+  pid?: number;
+  port?: number;
+  health_check_url?: string;
+  environment: string;
+}
+
+export interface DeploymentResponse {
+  deployment_id: string;
+  status: string;
+  message: string;
+  estimated_duration?: number;
+}
+
+export interface BackupResponse {
+  backup_id: string;
+  status: string;
+  message: string;
+  estimated_size_mb?: number;
+}
+
+// WebSocket message types for orchestration
+export interface OrchestrationWebSocketMessage extends WebSocketMessage {
+  type: 'project_status_change' | 'resource_update' | 'deployment_progress' | 'backup_progress' | 'environment_switch' | 'error';
+  project_id?: string;
+  data: {
+    status?: OrchestrationStatus;
+    resources?: ResourceAllocation;
+    deployment?: DeploymentStatus;
+    backup?: BackupInfo;
+    environment?: string;
+    error?: string;
+  };
+}

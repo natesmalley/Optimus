@@ -1,0 +1,332 @@
+name: Docker Build and Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'Dockerfile'
+      - 'frontend/Dockerfile'
+      - 'requirements.txt'
+      - 'frontend/package.json'
+      - 'src/**'
+      - 'frontend/src/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile'
+      - 'frontend/Dockerfile'
+      - 'requirements.txt'
+      - 'frontend/package.json'
+      - 'src/**'
+      - 'frontend/src/**'
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly security scan on Sundays
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+
+jobs:
+  # Build Multi-Architecture Images
+  build-multiarch:
+    name: Build Multi-Architecture Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    strategy:
+      matrix:
+        include:
+          - component: backend
+            dockerfile: ./Dockerfile
+            context: .
+          - component: frontend
+            dockerfile: ./frontend/Dockerfile
+            context: .
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: linux/amd64,linux/arm64
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: |
+          image=moby/buildkit:buildx-stable-1
+
+    - name: Log in to Container Registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.component }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=schedule,pattern={{date 'YYYYMMDD'}}
+
+    - name: Build and push image
+      uses: docker/build-push-action@v5
+      with:
+        context: ${{ matrix.context }}
+        file: ${{ matrix.dockerfile }}
+        platforms: linux/amd64,linux/arm64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha,scope=${{ matrix.component }}
+        cache-to: type=gha,scope=${{ matrix.component }},mode=max
+        build-args: |
+          BUILD_ENV=${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+          VERSION=${{ steps.meta.outputs.version }}
+        outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=${{ matrix.component }} image for Optimus
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.component }}:${{ steps.meta.outputs.version }}
+        format: 'sarif'
+        output: 'trivy-${{ matrix.component }}.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-${{ matrix.component }}.sarif'
+        category: 'trivy-${{ matrix.component }}'
+
+    - name: Run Grype vulnerability scanner
+      uses: anchore/scan-action@v3
+      id: grype
+      with:
+        image: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.component }}:${{ steps.meta.outputs.version }}
+        fail-build: false
+        severity-cutoff: high
+        output-format: sarif
+
+    - name: Upload Grype scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: ${{ steps.grype.outputs.sarif }}
+        category: 'grype-${{ matrix.component }}'
+
+  # Security Analysis
+  security-analysis:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    needs: build-multiarch
+    if: always()
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Hadolint (Dockerfile linting)
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: Dockerfile
+        format: sarif
+        output-file: hadolint-backend.sarif
+        no-fail: true
+
+    - name: Run Hadolint for frontend
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: frontend/Dockerfile
+        format: sarif
+        output-file: hadolint-frontend.sarif
+        no-fail: true
+
+    - name: Upload Hadolint results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: hadolint-backend.sarif
+        category: 'hadolint-backend'
+
+    - name: Upload Hadolint frontend results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: hadolint-frontend.sarif
+        category: 'hadolint-frontend'
+
+    - name: Run Dockle (Container Security)
+      run: |
+        # Install Dockle
+        curl -L -o dockle.deb https://github.com/goodwithtech/dockle/releases/latest/download/dockle_Linux-64bit.deb
+        sudo dpkg -i dockle.deb
+        
+        # Scan backend image
+        dockle --exit-code 1 --exit-level warn --format json --output dockle-backend.json \
+          ${{ env.REGISTRY }}/${{ github.repository }}/backend:latest || true
+        
+        # Scan frontend image  
+        dockle --exit-code 1 --exit-level warn --format json --output dockle-frontend.json \
+          ${{ env.REGISTRY }}/${{ github.repository }}/frontend:latest || true
+
+    - name: Upload Dockle results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dockle-results
+        path: |
+          dockle-backend.json
+          dockle-frontend.json
+
+  # Performance Testing
+  performance-testing:
+    name: Container Performance Testing
+    runs-on: ubuntu-latest
+    needs: build-multiarch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Test container startup time
+      run: |
+        # Test backend container startup
+        echo "Testing backend container startup time..."
+        START_TIME=$(date +%s)
+        docker run -d --name test-backend ${{ env.REGISTRY }}/${{ github.repository }}/backend:latest
+        
+        # Wait for health check to pass
+        until [ "$(docker inspect --format='{{.State.Health.Status}}' test-backend)" = "healthy" ]; do
+          sleep 1
+          CURRENT_TIME=$(date +%s)
+          if [ $((CURRENT_TIME - START_TIME)) -gt 120 ]; then
+            echo "Backend container took too long to start"
+            exit 1
+          fi
+        done
+        
+        END_TIME=$(date +%s)
+        STARTUP_TIME=$((END_TIME - START_TIME))
+        echo "Backend startup time: ${STARTUP_TIME} seconds"
+        
+        # Cleanup
+        docker rm -f test-backend
+        
+        # Test frontend container startup
+        echo "Testing frontend container startup time..."
+        START_TIME=$(date +%s)
+        docker run -d --name test-frontend ${{ env.REGISTRY }}/${{ github.repository }}/frontend:latest
+        
+        # Wait for container to be ready
+        sleep 10
+        until curl -f http://$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' test-frontend)/health; do
+          sleep 1
+          CURRENT_TIME=$(date +%s)
+          if [ $((CURRENT_TIME - START_TIME)) -gt 60 ]; then
+            echo "Frontend container took too long to start"
+            exit 1
+          fi
+        done
+        
+        END_TIME=$(date +%s)
+        STARTUP_TIME=$((END_TIME - START_TIME))
+        echo "Frontend startup time: ${STARTUP_TIME} seconds"
+        
+        # Cleanup
+        docker rm -f test-frontend
+
+    - name: Test container resource usage
+      run: |
+        # Start containers
+        docker run -d --name resource-test-backend ${{ env.REGISTRY }}/${{ github.repository }}/backend:latest
+        docker run -d --name resource-test-frontend ${{ env.REGISTRY }}/${{ github.repository }}/frontend:latest
+        
+        # Wait for startup
+        sleep 30
+        
+        # Get resource stats
+        docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}"
+        
+        # Cleanup
+        docker rm -f resource-test-backend resource-test-frontend
+
+  # Image Size Optimization Report
+  size-analysis:
+    name: Image Size Analysis
+    runs-on: ubuntu-latest
+    needs: build-multiarch
+    steps:
+    - name: Analyze image sizes
+      run: |
+        # Get image sizes
+        BACKEND_SIZE=$(docker images ${{ env.REGISTRY }}/${{ github.repository }}/backend:latest --format "{{.Size}}")
+        FRONTEND_SIZE=$(docker images ${{ env.REGISTRY }}/${{ github.repository }}/frontend:latest --format "{{.Size}}")
+        
+        echo "## Image Size Report" >> $GITHUB_STEP_SUMMARY
+        echo "| Component | Size |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Backend   | $BACKEND_SIZE |" >> $GITHUB_STEP_SUMMARY
+        echo "| Frontend  | $FRONTEND_SIZE |" >> $GITHUB_STEP_SUMMARY
+
+    - name: Run dive for layer analysis
+      run: |
+        # Install dive
+        curl -L -o dive.deb https://github.com/wagoodman/dive/releases/latest/download/dive_Linux_amd64.deb
+        sudo dpkg -i dive.deb
+        
+        # Analyze backend image layers
+        dive ${{ env.REGISTRY }}/${{ github.repository }}/backend:latest --ci --json > backend-analysis.json
+        
+        # Analyze frontend image layers
+        dive ${{ env.REGISTRY }}/${{ github.repository }}/frontend:latest --ci --json > frontend-analysis.json
+
+    - name: Upload layer analysis
+      uses: actions/upload-artifact@v3
+      with:
+        name: layer-analysis
+        path: |
+          backend-analysis.json
+          frontend-analysis.json
+
+  # Notification
+  notify-build-status:
+    name: Notify Build Status
+    runs-on: ubuntu-latest
+    needs: [build-multiarch, security-analysis, performance-testing, size-analysis]
+    if: always()
+    steps:
+    - name: Send Slack notification
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        channel: '#docker-builds'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+        custom_payload: |
+          {
+            attachments: [{
+              color: '${{ job.status }}' === 'success' ? 'good' : 'danger',
+              fields: [{
+                title: 'Docker Build Status',
+                value: 'Multi-arch build and security scan completed',
+                short: true
+              }, {
+                title: 'Images Built',
+                value: 'Backend and Frontend (amd64, arm64)',
+                short: true
+              }]
+            }]
+          }

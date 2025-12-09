@@ -31,6 +31,12 @@ from .troubleshooting import (
     KnowledgeBase,
     TroubleshootingSession
 )
+from .orchestration import (
+    DeploymentRecord,
+    ResourceAllocation,
+    BackupRecord,
+    EnvironmentConfiguration
+)
 
 __all__ = [
     "Base",
@@ -62,4 +68,8 @@ __all__ = [
     "SolutionEffectiveness",
     "KnowledgeBase",
     "TroubleshootingSession",
+    "DeploymentRecord",
+    "ResourceAllocation",
+    "BackupRecord",
+    "EnvironmentConfiguration",
 ]

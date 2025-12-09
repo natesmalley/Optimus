@@ -7,6 +7,10 @@ import ProjectDetail from '@/pages/ProjectDetail';
 import SystemMonitor from '@/pages/SystemMonitor';
 import Analytics from '@/pages/Analytics';
 import { Deliberation } from '@/pages/Deliberation';
+import Orchestration from '@/pages/Orchestration';
+import Deployment from '@/pages/Deployment';
+import Resources from '@/pages/Resources';
+import Backup from '@/pages/Backup';
 import ToastProvider from '@/components/ui/ToastProvider';
 
 function App() {
@@ -49,6 +53,10 @@ function App() {
           <Route path="monitor" element={<SystemMonitor />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="deliberation" element={<Deliberation />} />
+          <Route path="orchestration" element={<Orchestration />} />
+          <Route path="deployment" element={<Deployment />} />
+          <Route path="resources" element={<Resources />} />
+          <Route path="backup" element={<Backup />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
