@@ -961,5 +961,4 @@ async def start_websocket_background_tasks():
     logger.info("WebSocket background tasks started")
 
 
-# Initialize on module load
-asyncio.create_task(start_websocket_background_tasks())
+# Initialize task will be created by the FastAPI app startup

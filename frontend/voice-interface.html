@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimus Voice Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        
+        .listening-animation {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        
+        .voice-wave {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        
+        .voice-bar {
+            width: 4px;
+            background: linear-gradient(to top, #3B82F6, #8B5CF6);
+            border-radius: 2px;
+            animation: wave 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes wave {
+            0%, 100% { height: 20px; }
+            50% { height: 60px; }
+        }
+        
+        .voice-bar:nth-child(2) { animation-delay: 0.1s; }
+        .voice-bar:nth-child(3) { animation-delay: 0.2s; }
+        .voice-bar:nth-child(4) { animation-delay: 0.3s; }
+        .voice-bar:nth-child(5) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent mb-4">
+                🎙️ Optimus Voice Assistant
+            </h1>
+            <p class="text-gray-400 text-lg">Speak naturally to control your entire system</p>
+        </div>
+
+        <!-- Voice Control Interface -->
+        <div class="bg-gray-800 rounded-2xl p-8 mb-8">
+            <!-- Microphone Button -->
+            <div class="flex flex-col items-center mb-8">
+                <button id="micButton" 
+                    class="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                    <svg id="micIcon" class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg>
+                </button>
+                
+                <!-- Voice Wave Animation (hidden by default) -->
+                <div id="voiceWave" class="voice-wave hidden mt-6">
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                    <div class="voice-bar"></div>
+                </div>
+                
+                <p id="statusText" class="mt-6 text-lg text-gray-400">Click microphone or say "Hey Optimus"</p>
+            </div>
+
+            <!-- Wake Word Toggle -->
+            <div class="flex items-center justify-center mb-6">
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" id="wakeWordToggle" class="sr-only peer">
+                    <div class="relative w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <span class="ml-3 text-gray-300">Always listening for "Hey Optimus"</span>
+                </label>
+            </div>
+
+            <!-- Voice Status -->
+            <div id="voiceStatus" class="bg-gray-900/50 border border-blue-600 rounded-lg p-3 mb-4">
+                <p class="text-sm text-blue-400">🎤 Checking voice system...</p>
+            </div>
+
+            <!-- Current Input -->
+            <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                <p class="text-sm text-gray-500 mb-1">You said:</p>
+                <p id="userInput" class="text-lg">...</p>
+            </div>
+
+            <!-- Response -->
+            <div class="bg-gray-900 rounded-lg p-4">
+                <p class="text-sm text-gray-500 mb-1">Optimus says:</p>
+                <p id="optimusResponse" class="text-lg">Ready to help! Try saying "Help" to see what I can do.</p>
+            </div>
+        </div>
+
+        <!-- Quick Commands -->
+        <div class="bg-gray-800 rounded-2xl p-6 mb-8">
+            <h3 class="text-xl font-semibold mb-4">🚀 Quick Commands</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button onclick="sendCommand('Ask the council about our deployment strategy')" 
+                    class="text-left p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                    <span class="text-blue-400">Council:</span> "Ask about deployment"
+                </button>
+                <button onclick="sendCommand('Start the analytics project')" 
+                    class="text-left p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                    <span class="text-green-400">Project:</span> "Start analytics"
+                </button>
+                <button onclick="sendCommand('What is the system status?')" 
+                    class="text-left p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                    <span class="text-yellow-400">Status:</span> "Check system"
+                </button>
+                <button onclick="sendCommand('Deploy to staging')" 
+                    class="text-left p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                    <span class="text-purple-400">Deploy:</span> "To staging"
+                </button>
+                <button onclick="sendCommand('Check resource usage')" 
+                    class="text-left p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                    <span class="text-orange-400">Resources:</span> "Check usage"
+                </button>
+                <button onclick="sendCommand('Help me with the car seat decision')" 
+                    class="text-left p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition">
+                    <span class="text-pink-400">Personal:</span> "Car seat advice"
+                </button>
+            </div>
+        </div>
+
+        <!-- Conversation History -->
+        <div class="bg-gray-800 rounded-2xl p-6">
+            <h3 class="text-xl font-semibold mb-4">💬 Conversation History</h3>
+            <div id="conversationHistory" class="space-y-3 max-h-64 overflow-y-auto">
+                <p class="text-gray-500 italic">No conversations yet...</p>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="mt-8 text-center text-sm text-gray-500">
+            <p>Voice Language: <select id="languageSelect" class="bg-gray-700 text-white rounded px-2 py-1 ml-2">
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="es-ES">Spanish</option>
+                <option value="fr-FR">French</option>
+            </select></p>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:8003';
+        let isListening = false;
+        let alwaysListening = false;
+        let recognition = null;
+        let synthesis = window.speechSynthesis;
+        let conversationHistory = [];
+
+        // Initialize speech recognition
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                isListening = true;
+                updateUI('listening');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+                
+                document.getElementById('userInput').textContent = transcript;
+                
+                if (event.results[0].isFinal) {
+                    processCommand(transcript);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                updateUI('error', `Error: ${event.error}`);
+                isListening = false;
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                updateUI('idle');
+                
+                // Restart if always listening is enabled
+                if (alwaysListening) {
+                    setTimeout(() => startListening(true), 1000);
+                }
+            };
+        } else {
+            alert('Speech recognition is not supported in your browser. Try Chrome or Edge.');
+        }
+
+        // UI Updates
+        function updateUI(state, message = '') {
+            const micButton = document.getElementById('micButton');
+            const statusText = document.getElementById('statusText');
+            const voiceWave = document.getElementById('voiceWave');
+
+            switch(state) {
+                case 'listening':
+                    micButton.classList.add('listening-animation');
+                    statusText.textContent = '🎤 Listening...';
+                    voiceWave.classList.remove('hidden');
+                    break;
+                case 'processing':
+                    micButton.classList.remove('listening-animation');
+                    statusText.textContent = '⚡ Processing...';
+                    voiceWave.classList.add('hidden');
+                    break;
+                case 'speaking':
+                    statusText.textContent = '🔊 Speaking...';
+                    break;
+                case 'idle':
+                    micButton.classList.remove('listening-animation');
+                    statusText.textContent = alwaysListening ? 
+                        '👂 Listening for "Hey Optimus"' : 
+                        'Click microphone or say "Hey Optimus"';
+                    voiceWave.classList.add('hidden');
+                    break;
+                case 'error':
+                    micButton.classList.remove('listening-animation');
+                    statusText.textContent = message || 'Error occurred';
+                    voiceWave.classList.add('hidden');
+                    break;
+            }
+        }
+
+        // Start listening
+        function startListening(continuous = false) {
+            if (!recognition) return;
+            
+            if (isListening) {
+                recognition.stop();
+                return;
+            }
+
+            recognition.continuous = continuous;
+            recognition.start();
+        }
+
+        // Process voice command
+        async function processCommand(text) {
+            updateUI('processing');
+            
+            // Check for wake word if in always-listening mode
+            if (alwaysListening && text.toLowerCase().includes('hey optimus')) {
+                speak("Yes?", true);
+                setTimeout(() => startListening(false), 1500);
+                return;
+            }
+
+            // Parse and execute command
+            const response = await executeCommand(text);
+            
+            // Update UI with response
+            document.getElementById('optimusResponse').textContent = response;
+            
+            // Add to history
+            addToHistory(text, response);
+            
+            // Speak response
+            speak(response);
+        }
+
+        // Execute command via API
+        async function executeCommand(text) {
+            // Check for local commands first
+            const lowerText = text.toLowerCase();
+            
+            if (lowerText.includes('help')) {
+                return getHelp();
+            }
+
+            // Determine intent and call appropriate API
+            try {
+                // Default to Council for questions
+                if (lowerText.includes('?') || 
+                    lowerText.includes('should') || 
+                    lowerText.includes('council') ||
+                    lowerText.includes('advice')) {
+                    
+                    const response = await fetch(`${API_BASE}/api/council/deliberate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            query: text, 
+                            context: { via: 'voice' } 
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        return formatCouncilResponse(data);
+                    }
+                }
+                
+                // Project commands
+                if (lowerText.includes('start') || lowerText.includes('launch')) {
+                    return "Starting project... (simulated - connect to real API)";
+                }
+                
+                if (lowerText.includes('stop') || lowerText.includes('halt')) {
+                    return "Stopping project... (simulated - connect to real API)";
+                }
+                
+                if (lowerText.includes('deploy')) {
+                    return "Initiating deployment... (simulated - connect to real API)";
+                }
+                
+                if (lowerText.includes('status')) {
+                    return await getSystemStatus();
+                }
+                
+                // Default response
+                return "I understood: '" + text + "'. Try asking the Council for advice or say 'help' for commands.";
+                
+            } catch (error) {
+                console.error('Command execution error:', error);
+                return "Sorry, I encountered an error processing that command.";
+            }
+        }
+
+        // Format Council response for speech
+        function formatCouncilResponse(data) {
+            const consensus = data.consensus.replace(/_/g, ' ');
+            const confidence = Math.round(data.confidence * 100);
+            const recommendations = data.recommendations?.slice(0, 2) || [];
+            
+            let response = `The Council suggests to ${consensus} with ${confidence}% confidence. `;
+            
+            if (recommendations.length > 0) {
+                response += `They recommend: ${recommendations.join('. Also, ')}.`;
+            }
+            
+            return response;
+        }
+
+        // Get system status
+        async function getSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                if (response.ok) {
+                    return "System is healthy and operational. All services are running normally.";
+                }
+            } catch (error) {
+                return "Unable to check system status at the moment.";
+            }
+        }
+
+        // Get help text
+        function getHelp() {
+            return `I can help you with: 
+                Asking the Council for advice, 
+                Starting and stopping projects, 
+                Deploying applications, 
+                Checking system status, 
+                And personal decisions too. 
+                Just speak naturally!`;
+        }
+
+        // Optimus Prime Voice Class
+        class OptimusPrimeVoice {
+            constructor() {
+                this.synthesis = window.speechSynthesis;
+                this.useElevenLabs = false;
+                this.apiConfigured = false;
+                this.currentAudio = null;
+                
+                // Check if ElevenLabs is configured
+                this.checkVoiceAPI();
+            }
+            
+            async checkVoiceAPI() {
+                try {
+                    const response = await fetch(`${API_BASE}/api/voice/status`);
+                    const data = await response.json();
+                    
+                    this.apiConfigured = data.api_configured;
+                    this.useElevenLabs = data.api_configured;
+                    
+                    const statusEl = document.getElementById('voiceStatus');
+                    if (this.apiConfigured) {
+                        statusEl.className = 'bg-green-900/30 border border-green-600 rounded-lg p-3 mb-4';
+                        statusEl.innerHTML = `
+                            <p class="text-sm text-green-400">✅ ElevenLabs Voice Active</p>
+                            <p class="text-xs text-green-300">Authentic Optimus Prime voice enabled</p>
+                        `;
+                    } else {
+                        statusEl.className = 'bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mb-4';
+                        statusEl.innerHTML = `
+                            <p class="text-sm text-yellow-400">⚠️ Using Browser Voice</p>
+                            <p class="text-xs text-yellow-300">Run: python setup_voice_complete.py for authentic voice</p>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Voice API check failed:', error);
+                    const statusEl = document.getElementById('voiceStatus');
+                    statusEl.className = 'bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mb-4';
+                    statusEl.innerHTML = `
+                        <p class="text-sm text-yellow-400">⚠️ Voice API Not Available</p>
+                        <p class="text-xs text-yellow-300">Using browser fallback</p>
+                    `;
+                }
+            }
+            
+            addOptimusFlavor(text) {
+                const replacements = {
+                    'Starting': 'Initiating',
+                    'Stopping': 'Terminating', 
+                    'Error': 'System anomaly detected',
+                    'Complete': 'Mission accomplished',
+                    'Ready': 'All systems operational',
+                    'Hello': 'Greetings, human ally',
+                    'Goodbye': 'Till all are one',
+                    'Yes': 'Affirmative',
+                    'No': 'Negative',
+                    'OK': 'Acknowledged',
+                    'I understood': 'Message received',
+                    'Sorry': 'Regrettably',
+                    'Loading': 'Energizing',
+                    'Processing': 'Analyzing with Cybertronian protocols',
+                    'Checking': 'Scanning',
+                    'The Council': 'The Council of Primes'
+                };
+                
+                for (const [key, value] of Object.entries(replacements)) {
+                    const regex = new RegExp(`\\b${key}\\b`, 'gi');
+                    text = text.replace(regex, value);
+                }
+                
+                // Add occasional Optimus phrases
+                if (text.length < 100 && Math.random() < 0.4) {
+                    const prefixes = [
+                        'Autobots, ',
+                        'By the Matrix, ',
+                        'As Prime, I declare: ',
+                        'Cybertron wisdom indicates: '
+                    ];
+                    text = prefixes[Math.floor(Math.random() * prefixes.length)] + text;
+                }
+                
+                // Add inspiring endings occasionally
+                if (text.length < 150 && Math.random() < 0.3) {
+                    const endings = [
+                        ' Transform and roll out!',
+                        ' One shall stand, one shall fall.',
+                        ' There is more to you than meets the eye.',
+                        ' Freedom is the right of all sentient beings.'
+                    ];
+                    if (!text.endsWith('.') && !text.endsWith('!')) text += '.';
+                    text += endings[Math.floor(Math.random() * endings.length)];
+                }
+                
+                return text;
+            }
+            
+            async speak(text, quick = false) {
+                // Stop any ongoing speech
+                if (this.currentAudio) {
+                    this.currentAudio.pause();
+                    this.currentAudio = null;
+                }
+                this.synthesis.cancel();
+                
+                // Transform text to Optimus style if not using ElevenLabs
+                // (ElevenLabs API does its own transformation)
+                const displayText = this.addOptimusFlavor(text);
+                
+                if (this.useElevenLabs && this.apiConfigured) {
+                    // Use ElevenLabs API
+                    try {
+                        updateUI('speaking');
+                        
+                        const response = await fetch(`${API_BASE}/api/voice/generate`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                text: text,  // Send original text, API will transform
+                                transform_text: true
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.audio_url) {
+                            // Play the audio
+                            this.currentAudio = new Audio(data.audio_url);
+                            
+                            this.currentAudio.onended = () => {
+                                updateUI('idle');
+                                document.body.style.filter = '';
+                                this.currentAudio = null;
+                            };
+                            
+                            // Visual effect
+                            document.body.style.filter = 'hue-rotate(-10deg) brightness(1.1)';
+                            
+                            await this.currentAudio.play();
+                            
+                            // Update response text with transformed version
+                            if (data.transformed_text) {
+                                document.getElementById('optimusResponse').textContent = data.transformed_text;
+                            }
+                        } else {
+                            // Fallback to browser voice
+                            console.warn('ElevenLabs failed, using browser voice');
+                            this.speakWithBrowser(displayText, quick);
+                        }
+                    } catch (error) {
+                        console.error('ElevenLabs error:', error);
+                        // Fallback to browser voice
+                        this.speakWithBrowser(displayText, quick);
+                    }
+                } else {
+                    // Use browser voice
+                    this.speakWithBrowser(displayText, quick);
+                }
+            }
+            
+            speakWithBrowser(text, quick = false) {
+                if (!this.synthesis) return;
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                // Optimus Prime voice settings - MUCH deeper and slower
+                utterance.rate = quick ? 0.9 : 0.75;  // Much slower for gravitas
+                utterance.pitch = 0.1;  // Minimum pitch for deepest possible voice
+                utterance.volume = 1.0;  // Full volume for authority
+                
+                // Find the deepest male voice available
+                const voices = this.synthesis.getVoices();
+                const deepVoices = voices.filter(v => {
+                    const name = v.name.toLowerCase();
+                    return (
+                        // Prefer these deep voices
+                        name.includes('microsoft mark') ||
+                        name.includes('microsoft david') || 
+                        name.includes('google uk english male') ||
+                        name.includes('daniel') ||
+                        name.includes('james') ||
+                        name.includes('male') ||
+                        // Avoid high-pitched voices
+                        (!name.includes('female') && 
+                         !name.includes('samantha') && 
+                         !name.includes('karen') &&
+                         !name.includes('moira'))
+                    );
+                });
+                
+                // Sort by preference and pick deepest
+                const rankedVoices = deepVoices.sort((a, b) => {
+                    const aName = a.name.toLowerCase();
+                    const bName = b.name.toLowerCase();
+                    
+                    // Prioritize certain voices
+                    if (aName.includes('microsoft mark')) return -1;
+                    if (bName.includes('microsoft mark')) return 1;
+                    if (aName.includes('microsoft david')) return -1;
+                    if (bName.includes('microsoft david')) return 1;
+                    if (aName.includes('uk english male')) return -1;
+                    if (bName.includes('uk english male')) return 1;
+                    
+                    return 0;
+                });
+                
+                if (rankedVoices.length > 0) {
+                    utterance.voice = rankedVoices[0];
+                    console.log('Using voice:', rankedVoices[0].name);
+                }
+                
+                utterance.onstart = () => {
+                    updateUI('speaking');
+                    // Add visual effect
+                    document.body.style.filter = 'hue-rotate(-10deg) brightness(1.1)';
+                };
+                
+                utterance.onend = () => {
+                    updateUI('idle');
+                    document.body.style.filter = '';
+                };
+                
+                this.synthesis.speak(utterance);
+            }
+            
+            getGreeting() {
+                const greetings = [
+                    "I am Optimus Prime. How may I serve you?",
+                    "Autobots, roll out! State your request.",
+                    "This is Optimus Prime, awaiting your command.",
+                    "Greetings, human ally. I stand ready.",
+                    "Prime here. What is your mission?"
+                ];
+                return greetings[Math.floor(Math.random() * greetings.length)];
+            }
+        }
+        
+        // Initialize Optimus voice
+        const optimusVoice = new OptimusPrimeVoice();
+        
+        // Replace the speak function
+        function speak(text, quick = false) {
+            optimusVoice.speak(text, quick);
+        }
+
+        // Test ElevenLabs connection
+        async function testVoiceConnection() {
+            const statusEl = document.getElementById('voiceStatus');
+            statusEl.innerHTML = '<p class="text-sm text-blue-400">🔄 Testing voice connection...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/voice/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: 'Voice system test complete',
+                        transform_text: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusEl.className = 'bg-green-900/30 border border-green-600 rounded-lg p-3 mb-4';
+                    statusEl.innerHTML = `
+                        <p class="text-sm text-green-400">✅ Voice Test Successful</p>
+                        <p class="text-xs text-green-300">ElevenLabs connected and working</p>
+                    `;
+                } else {
+                    statusEl.className = 'bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mb-4';
+                    statusEl.innerHTML = `
+                        <p class="text-sm text-yellow-400">⚠️ ${data.error || 'Voice API not configured'}</p>
+                        <p class="text-xs text-yellow-300">Run: python setup_voice_complete.py</p>
+                    `;
+                }
+            } catch (error) {
+                statusEl.className = 'bg-red-900/30 border border-red-600 rounded-lg p-3 mb-4';
+                statusEl.innerHTML = `
+                    <p class="text-sm text-red-400">❌ Connection Failed</p>
+                    <p class="text-xs text-red-300">Check if server is running on port 8003</p>
+                `;
+            }
+        }
+
+        // Send command programmatically
+        function sendCommand(text) {
+            document.getElementById('userInput').textContent = text;
+            processCommand(text);
+        }
+
+        // Add to conversation history
+        function addToHistory(userText, optimusResponse) {
+            const history = document.getElementById('conversationHistory');
+            const entry = document.createElement('div');
+            entry.className = 'border-l-2 border-blue-500 pl-3';
+            entry.innerHTML = `
+                <p class="text-sm text-gray-400">${new Date().toLocaleTimeString()}</p>
+                <p class="text-blue-400">You: ${userText}</p>
+                <p class="text-green-400">Optimus: ${optimusResponse}</p>
+            `;
+            
+            // Remove placeholder if exists
+            if (history.children[0]?.classList.contains('text-gray-500')) {
+                history.innerHTML = '';
+            }
+            
+            history.insertBefore(entry, history.firstChild);
+            
+            // Keep only last 10 entries
+            while (history.children.length > 10) {
+                history.removeChild(history.lastChild);
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('micButton').addEventListener('click', () => {
+            startListening(false);
+        });
+
+        document.getElementById('wakeWordToggle').addEventListener('change', (e) => {
+            alwaysListening = e.target.checked;
+            if (alwaysListening) {
+                startListening(true);
+            } else {
+                if (isListening) {
+                    recognition.stop();
+                }
+            }
+        });
+
+        document.getElementById('languageSelect').addEventListener('change', (e) => {
+            if (recognition) {
+                recognition.lang = e.target.value;
+            }
+        });
+
+        // Keyboard shortcut
+        document.addEventListener('keydown', (e) => {
+            // Space bar to start/stop listening
+            if (e.code === 'Space' && e.ctrlKey) {
+                e.preventDefault();
+                startListening(false);
+            }
+        });
+
+        // Load voices
+        if (synthesis) {
+            synthesis.onvoiceschanged = () => {
+                console.log('Voices loaded:', synthesis.getVoices().length);
+            };
+        }
+
+        // Welcome message
+        window.addEventListener('load', () => {
+            // Load voices first
+            if (synthesis) {
+                synthesis.getVoices();
+                
+                // Chrome needs this event to load voices
+                synthesis.onvoiceschanged = () => {
+                    const voices = synthesis.getVoices();
+                    console.log(`Loaded ${voices.length} voices`);
+                    
+                    // List available deep voices
+                    const deepVoices = voices.filter(v => 
+                        v.name.toLowerCase().includes('male') ||
+                        v.name.toLowerCase().includes('david') ||
+                        v.name.toLowerCase().includes('mark')
+                    );
+                    console.log('Deep voices available:', deepVoices.map(v => v.name));
+                };
+            }
+            
+            setTimeout(() => {
+                speak(optimusVoice.getGreeting());
+            }, 1500);
+        });
+    </script>
+</body>
+</html>

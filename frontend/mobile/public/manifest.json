@@ -1,0 +1,51 @@
+{
+  "short_name": "Optimus",
+  "name": "Optimus Personal Assistant",
+  "description": "Your AI-powered life and work assistant",
+  "icons": [
+    {
+      "src": "optimus-icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "optimus-icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1e40af",
+  "background_color": "#111827",
+  "orientation": "portrait",
+  "categories": ["productivity", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Add Task",
+      "short_name": "Task",
+      "description": "Quickly add a new task",
+      "url": "/add-task",
+      "icons": [{"src": "task-icon.png", "sizes": "96x96"}]
+    },
+    {
+      "name": "Today's Agenda",
+      "short_name": "Agenda",
+      "description": "View today's schedule",
+      "url": "/today",
+      "icons": [{"src": "agenda-icon.png", "sizes": "96x96"}]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/optimus-assistant/id123456789"
+    }
+  ],
+  "prefer_related_applications": false,
+  "scope": "/",
+  "dir": "ltr",
+  "lang": "en-US"
+}

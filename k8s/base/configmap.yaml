@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: optimus-config
+  namespace: optimus
+  labels:
+    app.kubernetes.io/name: optimus
+    app.kubernetes.io/component: configmap
+data:
+  # Database configuration
+  POSTGRES_DB: "optimus_db"
+  POSTGRES_USER: "postgres"
+  
+  # Redis configuration
+  REDIS_PORT: "6379"
+  
+  # Application configuration
+  ENV: "production"
+  LOG_LEVEL: "info"
+  WORKERS: "4"
+  PORT: "8000"
+  
+  # CORS origins (will be overridden in overlays)
+  CORS_ORIGINS: "http://localhost"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: optimus
+  labels:
+    app.kubernetes.io/name: optimus
+    app.kubernetes.io/component: database
+data:
+  postgresql.conf: |
+    # Memory settings
+    shared_buffers = 256MB
+    effective_cache_size = 1GB
+    maintenance_work_mem = 64MB
+    work_mem = 4MB
+    
+    # Checkpoint settings
+    checkpoint_completion_target = 0.9
+    wal_buffers = 16MB
+    min_wal_size = 1GB
+    max_wal_size = 4GB
+    
+    # Connection settings
+    max_connections = 100
+    
+    # Logging
+    log_destination = 'stderr'
+    log_min_duration_statement = 1000
+    log_checkpoints = on
+    log_connections = on
+    log_disconnections = on
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: optimus
+  labels:
+    app.kubernetes.io/name: optimus
+    app.kubernetes.io/component: cache
+data:
+  redis.conf: |
+    # Network
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+    
+    # Memory management
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+    
+    # Persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+    
+    # AOF
+    appendonly yes
+    appendfsync everysec

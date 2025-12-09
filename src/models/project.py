@@ -51,6 +51,13 @@ class Project(Base, TimestampMixin):
     dependencies_from = relationship("ProjectDependency", foreign_keys="ProjectDependency.project_id", back_populates="project")
     dependencies_to = relationship("ProjectDependency", foreign_keys="ProjectDependency.depends_on_id", back_populates="depends_on")
     
+    # Orchestration relationships
+    deployment_records = relationship("DeploymentRecord", back_populates="project", cascade="all, delete-orphan")
+    resource_allocations = relationship("ResourceAllocation", back_populates="project", cascade="all, delete-orphan")  
+    backup_records = relationship("BackupRecord", back_populates="project", cascade="all, delete-orphan")
+    environment_configurations = relationship("EnvironmentConfiguration", back_populates="project", cascade="all, delete-orphan")
+    pipeline_definitions = relationship("PipelineDefinition", back_populates="project", cascade="all, delete-orphan")
+    
     # Indexes
     __table_args__ = (
         Index("idx_projects_status", "status"),

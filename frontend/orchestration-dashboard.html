@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimus Orchestration Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto p-6">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+                🚀 Optimus Orchestration Dashboard
+            </h1>
+            <p class="text-center text-gray-400 mt-2">Phase 2 - Complete Orchestration Control</p>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="connectionStatus" class="fixed top-4 right-4 px-4 py-2 rounded-lg bg-gray-800">
+            <span id="statusIndicator" class="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+            <span id="statusText">Disconnected</span>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="mb-6 border-b border-gray-700">
+            <nav class="flex space-x-8">
+                <button onclick="switchTab('projects')" class="tab-btn text-blue-400 border-b-2 border-blue-400 pb-2">Projects</button>
+                <button onclick="switchTab('orchestration')" class="tab-btn text-gray-400 pb-2">Orchestration</button>
+                <button onclick="switchTab('deployment')" class="tab-btn text-gray-400 pb-2">Deployment</button>
+                <button onclick="switchTab('resources')" class="tab-btn text-gray-400 pb-2">Resources</button>
+                <button onclick="switchTab('council')" class="tab-btn text-gray-400 pb-2">Council of Minds</button>
+            </nav>
+        </div>
+
+        <!-- Projects Tab -->
+        <div id="projectsTab" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4">📦 Discovered Projects</h2>
+            <div id="projectsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Projects will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Orchestration Tab -->
+        <div id="orchestrationTab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4">🎮 Project Orchestration</h2>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="mb-4">
+                    <label class="block text-sm text-gray-400 mb-2">Select Project</label>
+                    <select id="orchProjectSelect" class="w-full p-2 bg-gray-700 rounded text-white">
+                        <option value="">Loading projects...</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Environment</label>
+                        <select id="environmentSelect" class="w-full p-2 bg-gray-700 rounded text-white">
+                            <option value="development">Development</option>
+                            <option value="staging">Staging</option>
+                            <option value="production">Production</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Status</label>
+                        <div id="orchStatus" class="p-2 bg-gray-700 rounded">-</div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button onclick="launchProject()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+                        ▶️ Launch
+                    </button>
+                    <button onclick="stopProject()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+                        ⏹️ Stop
+                    </button>
+                    <button onclick="createBackup()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+                        💾 Backup
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deployment Tab -->
+        <div id="deploymentTab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4">🚀 Deployment Pipeline</h2>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="mb-4">
+                    <label class="block text-sm text-gray-400 mb-2">Deployment Strategy</label>
+                    <select id="deployStrategy" class="w-full p-2 bg-gray-700 rounded text-white">
+                        <option value="blue-green">Blue-Green</option>
+                        <option value="canary">Canary</option>
+                        <option value="rolling">Rolling Update</option>
+                    </select>
+                </div>
+
+                <button onclick="deployProject()" class="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded font-semibold">
+                    Deploy Selected Project
+                </button>
+
+                <div id="deploymentProgress" class="mt-6 hidden">
+                    <h3 class="text-lg font-semibold mb-2">Deployment Progress</h3>
+                    <div class="w-full bg-gray-700 rounded-full h-4">
+                        <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <p id="progressText" class="text-sm text-gray-400 mt-2">Initializing...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resources Tab -->
+        <div id="resourcesTab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4">📊 Resource Monitoring</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4">CPU Usage</h3>
+                    <canvas id="cpuChart"></canvas>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4">Memory Usage</h3>
+                    <canvas id="memoryChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="mt-6 bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">Resource Allocation</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">CPU Limit (millicores)</label>
+                        <input type="number" id="cpuLimit" value="2000" class="w-full p-2 bg-gray-700 rounded text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Memory Limit (MB)</label>
+                        <input type="number" id="memoryLimit" value="4096" class="w-full p-2 bg-gray-700 rounded text-white">
+                    </div>
+                </div>
+                <button onclick="allocateResources()" class="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+                    Apply Resource Limits
+                </button>
+            </div>
+        </div>
+
+        <!-- Council Tab -->
+        <div id="councilTab" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4">🧠 Council of Minds</h2>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <textarea id="councilQuery" class="w-full p-3 bg-gray-700 rounded text-white" rows="3" 
+                    placeholder="Ask the Council for strategic advice..."></textarea>
+                <button onclick="askCouncil()" class="mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-2 rounded font-semibold">
+                    🎯 Submit to Council
+                </button>
+                
+                <div id="councilResults" class="mt-6 hidden">
+                    <h3 class="text-lg font-semibold mb-2">Council Deliberation Results</h3>
+                    <div id="councilContent" class="bg-gray-700 rounded p-4">
+                        <!-- Results will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="mt-8 bg-gray-800 rounded-lg p-6">
+            <h3 class="text-xl font-bold mb-4">📜 Real-time Event Log</h3>
+            <div id="eventLog" class="h-32 overflow-y-auto bg-gray-900 rounded p-3 text-sm font-mono">
+                <div class="text-gray-500">Waiting for events...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8003';
+        let ws = null;
+        let projects = [];
+        let selectedProjectId = null;
+        let cpuChart = null;
+        let memoryChart = null;
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initWebSocket();
+            loadProjects();
+            initCharts();
+        });
+
+        // WebSocket connection
+        function initWebSocket() {
+            ws = new WebSocket('ws://localhost:8003/ws');
+            
+            ws.onopen = () => {
+                updateConnectionStatus(true);
+                ws.send(JSON.stringify({ action: 'subscribe', channel: 'orchestration' }));
+                addEventLog('Connected to Optimus server', 'success');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+
+            ws.onerror = () => {
+                updateConnectionStatus(false);
+                addEventLog('Connection error', 'error');
+            };
+
+            ws.onclose = () => {
+                updateConnectionStatus(false);
+                addEventLog('Disconnected from server', 'warning');
+                setTimeout(initWebSocket, 5000); // Reconnect after 5 seconds
+            };
+        }
+
+        function handleWebSocketMessage(data) {
+            // Add to event log
+            if (data.type !== 'echo') {
+                addEventLog(`${data.type}: ${JSON.stringify(data)}`, 'info');
+            }
+
+            // Handle specific message types
+            switch(data.type) {
+                case 'project.started':
+                    showNotification('Project started successfully!', 'success');
+                    loadProjects();
+                    break;
+                case 'project.stopped':
+                    showNotification('Project stopped', 'info');
+                    loadProjects();
+                    break;
+                case 'deployment.progress':
+                    updateDeploymentProgress(data.progress);
+                    break;
+                case 'resource.update':
+                    updateResourceCharts(data);
+                    break;
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const indicator = document.getElementById('statusIndicator');
+            const text = document.getElementById('statusText');
+            
+            if (connected) {
+                indicator.className = 'inline-block w-3 h-3 rounded-full bg-green-500 mr-2';
+                text.textContent = 'Connected';
+            } else {
+                indicator.className = 'inline-block w-3 h-3 rounded-full bg-red-500 mr-2';
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        // Load projects
+        async function loadProjects() {
+            try {
+                const response = await fetch(`${API_BASE}/api/projects`);
+                projects = await response.json();
+                
+                // Update projects grid
+                const grid = document.getElementById('projectsGrid');
+                grid.innerHTML = projects.map(project => `
+                    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <h3 class="text-lg font-semibold mb-2">${project.name}</h3>
+                        <p class="text-sm text-gray-400 mb-2">${project.path}</p>
+                        <div class="flex items-center justify-between">
+                            <span class="px-2 py-1 rounded text-xs ${
+                                project.status === 'running' ? 'bg-green-600' : 
+                                project.status === 'stopped' ? 'bg-gray-600' : 'bg-yellow-600'
+                            }">
+                                ${project.status.toUpperCase()}
+                            </span>
+                            <span class="text-xs text-gray-500">${project.environment}</span>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            CPU: ${project.cpu_usage.toFixed(1)}% | Memory: ${project.memory_usage}MB
+                        </div>
+                    </div>
+                `).join('');
+
+                // Update project selects
+                const orchSelect = document.getElementById('orchProjectSelect');
+                orchSelect.innerHTML = projects.map(p => 
+                    `<option value="${p.id}">${p.name}</option>`
+                ).join('');
+                
+                if (projects.length > 0 && !selectedProjectId) {
+                    selectedProjectId = projects[0].id;
+                    orchSelect.value = selectedProjectId;
+                    updateOrchestrationStatus();
+                }
+
+            } catch (error) {
+                console.error('Failed to load projects:', error);
+                addEventLog('Failed to load projects', 'error');
+            }
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active state from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-blue-400', 'border-b-2', 'border-blue-400');
+                btn.classList.add('text-gray-400');
+            });
+            
+            // Show selected tab
+            document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+            
+            // Activate button
+            event.target.classList.remove('text-gray-400');
+            event.target.classList.add('text-blue-400', 'border-b-2', 'border-blue-400');
+        }
+
+        // Orchestration functions
+        async function launchProject() {
+            const projectId = document.getElementById('orchProjectSelect').value;
+            const environment = document.getElementById('environmentSelect').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/orchestration/launch/${projectId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ environment })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Project launching...', 'success');
+                    updateOrchestrationStatus();
+                }
+            } catch (error) {
+                showNotification('Failed to launch project', 'error');
+            }
+        }
+
+        async function stopProject() {
+            const projectId = document.getElementById('orchProjectSelect').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/orchestration/stop/${projectId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Project stopping...', 'info');
+                    updateOrchestrationStatus();
+                }
+            } catch (error) {
+                showNotification('Failed to stop project', 'error');
+            }
+        }
+
+        async function createBackup() {
+            const projectId = document.getElementById('orchProjectSelect').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/orchestration/backups/${projectId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showNotification(`Backup created: ${result.backup_id}`, 'success');
+                }
+            } catch (error) {
+                showNotification('Failed to create backup', 'error');
+            }
+        }
+
+        async function deployProject() {
+            const projectId = document.getElementById('orchProjectSelect').value;
+            const strategy = document.getElementById('deployStrategy').value;
+            
+            document.getElementById('deploymentProgress').classList.remove('hidden');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/orchestration/deploy/${projectId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ strategy, version: 'latest' })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Deployment started!', 'success');
+                }
+            } catch (error) {
+                showNotification('Deployment failed', 'error');
+            }
+        }
+
+        function updateDeploymentProgress(progress) {
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = 
+                progress === 100 ? 'Deployment complete!' : `Deploying... ${progress}%`;
+        }
+
+        async function updateOrchestrationStatus() {
+            const projectId = document.getElementById('orchProjectSelect').value;
+            const project = projects.find(p => p.id === projectId);
+            
+            if (project) {
+                document.getElementById('orchStatus').textContent = project.status.toUpperCase();
+                document.getElementById('orchStatus').className = `p-2 rounded ${
+                    project.status === 'running' ? 'bg-green-600' : 
+                    project.status === 'stopped' ? 'bg-gray-600' : 'bg-yellow-600'
+                }`;
+            }
+        }
+
+        // Resource monitoring
+        function initCharts() {
+            // CPU Chart
+            const cpuCtx = document.getElementById('cpuChart');
+            if (cpuCtx) {
+                cpuChart = new Chart(cpuCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'CPU Usage (%)',
+                            data: [],
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Memory Chart
+            const memCtx = document.getElementById('memoryChart');
+            if (memCtx) {
+                memoryChart = new Chart(memCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Memory Usage (MB)',
+                            data: [],
+                            backgroundColor: 'rgba(168, 85, 247, 0.5)',
+                            borderColor: 'rgb(168, 85, 247)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateResourceCharts(data) {
+            if (cpuChart && data.cpu) {
+                cpuChart.data.labels.push(new Date().toLocaleTimeString());
+                cpuChart.data.datasets[0].data.push(data.cpu);
+                
+                // Keep only last 10 data points
+                if (cpuChart.data.labels.length > 10) {
+                    cpuChart.data.labels.shift();
+                    cpuChart.data.datasets[0].data.shift();
+                }
+                cpuChart.update();
+            }
+
+            if (memoryChart && data.memory) {
+                memoryChart.data.labels = [data.project_id];
+                memoryChart.data.datasets[0].data = [data.memory];
+                memoryChart.update();
+            }
+        }
+
+        async function allocateResources() {
+            const projectId = document.getElementById('orchProjectSelect').value;
+            const cpuLimit = parseInt(document.getElementById('cpuLimit').value);
+            const memoryLimit = parseInt(document.getElementById('memoryLimit').value);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/orchestration/resources/allocate?project_id=${projectId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cpu_limit: cpuLimit, memory_limit: memoryLimit })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Resources allocated successfully', 'success');
+                }
+            } catch (error) {
+                showNotification('Failed to allocate resources', 'error');
+            }
+        }
+
+        // Council of Minds
+        async function askCouncil() {
+            const query = document.getElementById('councilQuery').value;
+            if (!query) {
+                showNotification('Please enter a question', 'warning');
+                return;
+            }
+
+            document.getElementById('councilResults').classList.add('hidden');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/council/deliberate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, context: {} })
+                });
+                
+                const result = await response.json();
+                displayCouncilResults(result);
+            } catch (error) {
+                showNotification('Failed to get council response', 'error');
+            }
+        }
+
+        function displayCouncilResults(result) {
+            const content = document.getElementById('councilContent');
+            content.innerHTML = `
+                <div class="mb-4">
+                    <h4 class="font-semibold mb-2">Consensus: <span class="text-${
+                        result.consensus === 'proceed' ? 'green' : 
+                        result.consensus === 'abort' ? 'red' : 'yellow'
+                    }-400">${result.consensus.toUpperCase()}</span></h4>
+                    <p class="text-sm">Confidence: ${(result.confidence * 100).toFixed(1)}%</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h4 class="font-semibold mb-2">Persona Perspectives:</h4>
+                    ${result.perspectives.map(p => `
+                        <div class="mb-2 text-sm">
+                            <span class="font-medium">${p.persona}:</span> 
+                            <span class="text-${
+                                p.stance.includes('agree') ? 'green' : 
+                                p.stance === 'neutral' ? 'yellow' : 'red'
+                            }-400">${p.stance}</span>
+                            (${(p.confidence * 100).toFixed(0)}%)
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-2">Recommendations:</h4>
+                    <ul class="list-disc list-inside text-sm">
+                        ${result.recommendations.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            document.getElementById('councilResults').classList.remove('hidden');
+        }
+
+        // Utility functions
+        function addEventLog(message, type = 'info') {
+            const log = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = {
+                'success': 'text-green-400',
+                'error': 'text-red-400',
+                'warning': 'text-yellow-400',
+                'info': 'text-blue-400'
+            }[type] || 'text-gray-400';
+            
+            const entry = document.createElement('div');
+            entry.className = color;
+            entry.textContent = `[${timestamp}] ${message}`;
+            
+            log.insertBefore(entry, log.firstChild);
+            
+            // Keep only last 50 entries
+            while (log.children.length > 50) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            // Simple notification - could be enhanced with a toast library
+            addEventLog(message, type);
+        }
+
+        // Auto-refresh projects every 30 seconds
+        setInterval(loadProjects, 30000);
+    </script>
+</body>
+</html>

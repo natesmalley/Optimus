@@ -1,0 +1,202 @@
+# Prometheus alerting rules for Optimus
+
+groups:
+  - name: optimus.application
+    rules:
+      - alert: OptimusBackendDown
+        expr: up{job="optimus-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: optimus-backend
+        annotations:
+          summary: "Optimus Backend service is down"
+          description: "Optimus Backend service has been down for more than 2 minutes"
+
+      - alert: OptimusHighErrorRate
+        expr: rate(http_requests_total{job="optimus-backend",status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: optimus-backend
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors per second"
+
+      - alert: OptimusHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="optimus-backend"}[5m])) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          service: optimus-backend
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }} seconds"
+
+      - alert: OptimusHighMemoryUsage
+        expr: (process_resident_memory_bytes{job="optimus-backend"} / 1024 / 1024 / 1024) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+          service: optimus-backend
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}GB"
+
+      - alert: OptimusHighCPUUsage
+        expr: rate(process_cpu_seconds_total{job="optimus-backend"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: optimus-backend
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}%"
+
+  - name: optimus.database
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgres-exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 2 minutes"
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL high connection usage"
+          description: "Connection usage is {{ $value | humanizePercentage }}"
+
+      - alert: PostgreSQLSlowQueries
+        expr: pg_stat_activity_max_tx_duration{datname!~"template.*|postgres"} > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL slow queries detected"
+          description: "Longest running transaction is {{ $value }} seconds"
+
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL replication lag"
+          description: "Replication lag is {{ $value }} seconds"
+
+  - name: optimus.cache
+    rules:
+      - alert: RedisDown
+        expr: up{job="redis-exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache has been down for more than 2 minutes"
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: RedisHighConnectionCount
+        expr: redis_connected_clients > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis high connection count"
+          description: "Redis has {{ $value }} connected clients"
+
+  - name: optimus.infrastructure
+    rules:
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value | humanizePercentage }} on {{ $labels.mountpoint }}"
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: HighCPULoad
+        expr: node_load15 / on(instance) count by (instance)(node_cpu_seconds_total{mode="idle"}) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High CPU load"
+          description: "CPU load is {{ $value }}"
+
+      - alert: ContainerRestarting
+        expr: increase(kube_pod_container_status_restarts_total[1h]) > 5
+        for: 0m
+        labels:
+          severity: warning
+          service: kubernetes
+        annotations:
+          summary: "Container restarting frequently"
+          description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour"
+
+  - name: optimus.business
+    rules:
+      - alert: LowProjectScanRate
+        expr: rate(optimus_projects_scanned_total[1h]) < 0.1
+        for: 30m
+        labels:
+          severity: warning
+          service: optimus-scanner
+        annotations:
+          summary: "Low project scan rate"
+          description: "Project scan rate is {{ $value }} projects per hour"
+
+      - alert: HighErrorScans
+        expr: rate(optimus_scan_errors_total[15m]) > 0.01
+        for: 15m
+        labels:
+          severity: warning
+          service: optimus-scanner
+        annotations:
+          summary: "High scan error rate"
+          description: "Scan error rate is {{ $value }} errors per minute"
+
+      - alert: CouncilDeliberationFailures
+        expr: rate(optimus_council_deliberation_failures_total[15m]) > 0.01
+        for: 15m
+        labels:
+          severity: warning
+          service: optimus-council
+        annotations:
+          summary: "Council deliberation failures"
+          description: "Council deliberation failure rate is {{ $value }} failures per minute"

@@ -8,7 +8,7 @@ import os
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import PostgresDsn, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 import redis.asyncio as redis
 
@@ -27,12 +27,12 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8080"]
     
     # Database settings
-    database_url: Optional[PostgresDsn] = None
+    database_url: Optional[str] = None
     database_host: str = "localhost"
     database_port: int = 5432
     database_name: str = "optimus_db"
     database_user: str = "postgres"
-    database_password: str = "password"
+    database_password: str = "optimus123"
     database_pool_size: int = 20
     database_max_overflow: int = 30
     
@@ -70,14 +70,15 @@ class Settings(BaseSettings):
                 return v.replace("postgresql://", "postgresql+asyncpg://")
             return v
         values = info.data if info else {}
-        return PostgresDsn.build(
-            scheme="postgresql+asyncpg",
-            user=values.get("database_user"),
-            password=values.get("database_password"),
-            host=values.get("database_host"),
-            port=str(values.get("database_port")),
-            path=f"/{values.get('database_name') or ''}",
-        )
+        # Build the database URL string directly
+        user = values.get("database_user", "postgres")
+        password = values.get("database_password", "optimus123")
+        host = values.get("database_host", "localhost")
+        port = values.get("database_port", 5432)
+        db_name = values.get("database_name", "optimus_db")
+        
+        url = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+        return url
     
     @field_validator("log_level")
     def validate_log_level(cls, v: str) -> str:
@@ -205,3 +206,6 @@ settings = get_settings()
 db_manager = DatabaseManager(settings)
 redis_manager = RedisManager(settings)
 logger = setup_logging(settings)
+
+# Convenience function for backwards compatibility
+get_db_session = db_manager.get_session

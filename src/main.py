@@ -15,9 +15,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .config import get_settings, db_manager, redis_manager, logger
-from .api import projects, runtime, metrics, council, memory, knowledge_graph, scanner, monitor, dashboard, websocket
-from .services import ProjectScanner, RuntimeMonitor
+from src.config import get_settings, db_manager, redis_manager, logger
+from src.api import projects, runtime, metrics, council, memory, knowledge_graph, scanner, monitor, dashboard, websocket
+from src.services import ProjectScanner, RuntimeMonitor
 
 
 # Background monitoring task

@@ -169,3 +169,6 @@ class MemorySystem(MemorySystemAdapter):
     Uses the optimized implementation while maintaining full compatibility.
     """
     pass
+
+# Alias for backwards compatibility
+MemoryIntegration = MemorySystemAdapter

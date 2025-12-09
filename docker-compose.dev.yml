@@ -1,0 +1,134 @@
+# Docker Compose development overrides for Optimus
+
+version: '3.8'
+
+services:
+  # Database with development settings
+  postgres:
+    environment:
+      POSTGRES_DB: optimus_dev_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: optimus123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-dev.sql:/docker-entrypoint-initdb.d/init-dev.sql:ro
+
+  # Redis with development settings
+  redis:
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+
+  # Backend with development overrides
+  optimus-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        BUILD_ENV: development
+    environment:
+      # Development database
+      DATABASE_URL: postgresql://postgres:optimus123@postgres:5432/optimus_dev_db
+      REDIS_URL: redis://redis:6379
+      
+      # Development settings
+      ENV: development
+      LOG_LEVEL: debug
+      WORKERS: 1
+      
+      # Development features
+      RELOAD: "true"
+      DEBUG: "true"
+      
+      # CORS for development
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:5173,http://localhost"
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Debug port
+    volumes:
+      # Mount source code for hot reloading
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./requirements.txt:/app/requirements.txt:ro
+      
+      # Development data
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+      
+      # Project monitoring
+      - ${HOME}/projects:/app/projects:ro
+    command: >
+      sh -c "
+        pip install debugpy &&
+        python -m debugpy --listen 0.0.0.0:5678 --wait-for-client src/main.py --reload
+      "
+
+  # Frontend with development settings
+  optimus-frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: builder
+    environment:
+      API_URL: http://localhost:8000
+      BUILD_ENV: development
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reloading
+      - ./frontend/src:/app/src:ro
+      - ./frontend/package.json:/app/package.json:ro
+      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
+      - ./frontend/tsconfig.json:/app/tsconfig.json:ro
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js:ro
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+
+  # Development tools
+  adminer:
+    image: adminer:4.8.1
+    container_name: optimus-adminer
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - optimus-network
+
+  # Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: optimus-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - optimus-network
+
+  # Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: optimus-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - optimus-network
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local

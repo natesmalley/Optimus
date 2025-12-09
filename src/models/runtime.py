@@ -27,25 +27,23 @@ class RuntimeStatus(Base):
         nullable=False
     )
     process_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    process_id: Mapped[Optional[int]] = mapped_column(Integer)  # Renamed from pid for clarity
+    pid: Mapped[Optional[int]] = mapped_column(Integer)  # Process ID
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     cpu_usage: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(5, 2))
-    memory_usage: Mapped[Optional[Decimal]] = mapped_column(DECIMAL(5, 2))  # Percentage
-    memory_rss: Mapped[Optional[int]] = mapped_column(BigInteger)  # Actual memory in bytes
-    ports: Mapped[Optional[list]] = mapped_column(ARRAY(Integer))  # Multiple ports
+    memory_usage: Mapped[Optional[int]] = mapped_column(BigInteger)  # Memory in bytes
+    port: Mapped[Optional[int]] = mapped_column(Integer)  # Port number
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
         server_default=func.now(),
         nullable=False
     )
-    last_seen: Mapped[datetime] = mapped_column(  # Renamed from last_heartbeat
+    last_heartbeat: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
         server_default=func.now(),
         nullable=False
     )
     stopped_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     error_message: Mapped[Optional[str]] = mapped_column(Text)
-    process_metadata: Mapped[Optional[dict]] = mapped_column(JSONB)  # Additional process info
     
     # Relationships
     project = relationship("Project", back_populates="runtime_statuses")
@@ -56,15 +54,13 @@ class RuntimeStatus(Base):
         Index("idx_runtime_status", "status"),
         Index("idx_runtime_active", "project_id", "status", 
               postgresql_where="status IN ('starting', 'running')"),
-        Index("idx_runtime_ports", "ports", postgresql_using="gin"),
-        Index("idx_runtime_last_seen", "last_seen", postgresql_using="btree",
-              postgresql_ops={"last_seen": "DESC"}),
-        Index("idx_runtime_process_id", "process_id", "project_id"),
-        Index("idx_runtime_metadata", "process_metadata", postgresql_using="gin"),
+        Index("idx_runtime_port", "port", postgresql_where="port IS NOT NULL"),
+        Index("idx_runtime_heartbeat", "last_heartbeat", postgresql_using="btree",
+              postgresql_ops={"last_heartbeat": "DESC"}),
     )
     
     def __repr__(self) -> str:
-        return f"<RuntimeStatus(process_name='{self.process_name}', status='{self.status}', pid={self.process_id})>"
+        return f"<RuntimeStatus(process_name='{self.process_name}', status='{self.status}', pid={self.pid})>"
     
     @property
     def is_running(self) -> bool:
@@ -74,9 +70,9 @@ class RuntimeStatus(Base):
     @property
     def memory_usage_mb(self) -> Optional[float]:
         """Get memory usage in MB."""
-        if self.memory_rss is None:
+        if self.memory_usage is None:
             return None
-        return self.memory_rss / (1024 * 1024)
+        return self.memory_usage / (1024 * 1024)
     
     @property
     def primary_port(self) -> Optional[int]:
